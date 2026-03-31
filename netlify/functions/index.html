@@ -353,6 +353,8 @@
               <option value="steady">Tuesday — Steady state (zone 2)</option>
               <option value="interval">Saturday — Intervals (zone 4–5)</option>
               <option value="easy">Easy / recovery run</option>
+              <option value="run">Run (Strava)</option>
+              <option value="walk">Walk (Strava)</option>
             </select>
           </div>
         </div>
@@ -514,6 +516,17 @@
       <!-- Add meal -->
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title">Log a meal</div>
+
+        <!-- AI description input -->
+        <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">AI meal estimator</div>
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <textarea id="ai-meal-input" placeholder="Describe what you ate, e.g. steak and eggs with avocado toast on wheat bread..." style="flex:1;min-height:60px;resize:none;font-size:13px;"></textarea>
+            <button class="btn btn-primary" onclick="aiEstimateMeal()" id="ai-estimate-btn" style="white-space:nowrap;flex-shrink:0;">Estimate</button>
+          </div>
+          <div id="ai-meal-status" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:6px;display:none;"></div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label>Meal</label>
@@ -1311,7 +1324,7 @@ function renderHistory(filter) {
 
   tbody.innerHTML = all.map(a => {
     const tag = a.kind === 'run'
-      ? `<span class="tag tag-run">${a.type === 'interval' ? 'intervals' : 'steady'}</span>`
+      ? `<span class="tag tag-run">${a.type === 'interval' ? 'intervals' : a.type === 'walk' ? 'walk' : a.type === 'run' ? 'run' : a.type}</span>`
       : `<span class="tag tag-${a.type}">${a.type}</span>`;
     const detail = a.kind === 'run'
       ? `${a.distance || '—'} mi · ${a.duration || '—'} min · ${a.pace || '—'} /mi`
@@ -1675,8 +1688,8 @@ async function stravaSyncRuns() {
       const paceStr   = paceSec > 0 ? `${paceMin}:${String(paceSecs).padStart(2,'0')}` : '—';
       const date      = r.start_date_local.split('T')[0];
       const sportType = (r.sport_type || r.type || 'Run').toLowerCase();
-      // Map to run log type
-      const type = sportType === 'walk' || sportType === 'hike' ? 'easy' : durMin >= 30 && durMin <= 50 ? 'steady' : durMin < 30 ? 'interval' : 'easy';
+      const typeMap = { run: 'run', virtualrun: 'run', trailrun: 'run', walk: 'walk', hike: 'walk' };
+      const type = typeMap[sportType] || 'run';
       existing.push({
         id: Date.now() + Math.random(),
         strava_id: r.id,
@@ -1747,6 +1760,79 @@ async function stravaInit() {
     const name = cacheGet('strava_athlete') || 'Connected';
     stravaSetConnected(name);
   }
+}
+
+// ── AI meal estimator ─────────────────────────────────
+async function aiEstimateMeal() {
+  const input = document.getElementById('ai-meal-input').value.trim();
+  if (!input) { toast('Describe your meal first'); return; }
+
+  const btn = document.getElementById('ai-estimate-btn');
+  const status = document.getElementById('ai-meal-status');
+  btn.textContent = 'Estimating...';
+  btn.disabled = true;
+  status.style.display = 'block';
+  status.textContent = 'Asking Claude...';
+
+  try {
+    const response = await fetch('/.netlify/functions/ai-meal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: input })
+    });
+
+    const data = await response.json();
+    const text = data.result || '';
+
+    let parsed;
+    try {
+      const clean = text.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch {
+      throw new Error('Could not parse response');
+    }
+
+    if (!parsed.items?.length) throw new Error('No items returned');
+
+    // Populate meal name
+    if (parsed.meal_name) {
+      document.getElementById('food-meal-name').value = parsed.meal_name;
+    }
+
+    // Clear existing items and populate with AI estimates
+    document.getElementById('food-item-rows').innerHTML = '';
+    foodItemCount = 0;
+    parsed.items.forEach(item => {
+      foodItemCount++;
+      const id = 'fi-' + foodItemCount;
+      const div = document.createElement('div');
+      div.id = id;
+      div.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;';
+      div.innerHTML = `
+        <input type="text" value="${item.name}" style="font-size:13px;">
+        <input type="number" value="${Math.round(item.cal)}" min="0" style="font-size:13px;" class="fi-cal">
+        <input type="number" value="${item.protein.toFixed(1)}" min="0" step="0.1" style="font-size:13px;" class="fi-pro">
+        <input type="number" value="${item.carbs.toFixed(1)}" min="0" step="0.1" style="font-size:13px;" class="fi-carb">
+        <input type="number" value="${item.fat.toFixed(1)}" min="0" step="0.1" style="font-size:13px;" class="fi-fat">
+        <button class="btn-icon" onclick="document.getElementById('${id}').remove()" title="Remove">×</button>
+      `;
+      document.getElementById('food-item-rows').appendChild(div);
+    });
+
+    const total = parsed.items.reduce((s, i) => s + i.cal, 0);
+    status.textContent = `Estimated ${parsed.items.length} items · ~${Math.round(total)} cal total. Review and adjust if needed.`;
+    status.style.color = 'var(--accent2)';
+    document.getElementById('ai-meal-input').value = '';
+    toast('Meal estimated — review and save');
+
+  } catch(e) {
+    status.textContent = 'Estimation failed — try rephrasing or add items manually';
+    status.style.color = 'var(--red)';
+    toast('AI estimation failed');
+  }
+
+  btn.textContent = 'Estimate';
+  btn.disabled = false;
 }
 
 // ── Export / Import ───────────────────────────────────

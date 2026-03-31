@@ -353,6 +353,8 @@
               <option value="steady">Tuesday — Steady state (zone 2)</option>
               <option value="interval">Saturday — Intervals (zone 4–5)</option>
               <option value="easy">Easy / recovery run</option>
+              <option value="run">Run (Strava)</option>
+              <option value="walk">Walk (Strava)</option>
             </select>
           </div>
         </div>
@@ -1311,7 +1313,7 @@ function renderHistory(filter) {
 
   tbody.innerHTML = all.map(a => {
     const tag = a.kind === 'run'
-      ? `<span class="tag tag-run">${a.type === 'interval' ? 'intervals' : 'steady'}</span>`
+      ? `<span class="tag tag-run">${a.type === 'interval' ? 'intervals' : a.type === 'walk' ? 'walk' : a.type === 'run' ? 'run' : a.type}</span>`
       : `<span class="tag tag-${a.type}">${a.type}</span>`;
     const detail = a.kind === 'run'
       ? `${a.distance || '—'} mi · ${a.duration || '—'} min · ${a.pace || '—'} /mi`
@@ -1675,8 +1677,8 @@ async function stravaSyncRuns() {
       const paceStr   = paceSec > 0 ? `${paceMin}:${String(paceSecs).padStart(2,'0')}` : '—';
       const date      = r.start_date_local.split('T')[0];
       const sportType = (r.sport_type || r.type || 'Run').toLowerCase();
-      // Map to run log type
-      const type = sportType === 'walk' || sportType === 'hike' ? 'easy' : durMin >= 30 && durMin <= 50 ? 'steady' : durMin < 30 ? 'interval' : 'easy';
+      const typeMap = { run: 'run', virtualrun: 'run', trailrun: 'run', walk: 'walk', hike: 'walk' };
+      const type = typeMap[sportType] || 'run';
       existing.push({
         id: Date.now() + Math.random(),
         strava_id: r.id,

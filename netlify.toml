@@ -1,0 +1,7 @@
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/strava-callback"
+  to = "/.netlify/functions/strava-auth"
+  status = 200

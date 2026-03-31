@@ -1657,7 +1657,10 @@ async function stravaSyncRuns() {
     const activities = await res.json();
     if (!Array.isArray(activities)) { toast('Strava sync failed'); btn.textContent = '↓ Sync runs'; btn.disabled = false; return; }
 
-    const runs = activities.filter(a => a.type === 'Run' || a.sport_type === 'Run');
+    const runs = activities.filter(a => {
+      const t = (a.sport_type || a.type || '').toLowerCase();
+      return ['run','walk','hike','trailrun','virtualrun'].includes(t);
+    });
     const existing = getRuns();
     const existingStravaIds = new Set(existing.filter(r => r.strava_id).map(r => r.strava_id));
 
@@ -1666,13 +1669,14 @@ async function stravaSyncRuns() {
       if (existingStravaIds.has(r.id)) return;
       const distMiles = (r.distance / 1609.344).toFixed(2);
       const durMin    = Math.round(r.moving_time / 60);
-      const paceSec   = r.moving_time / (r.distance / 1609.344);
+      const paceSec   = r.distance > 0 ? r.moving_time / (r.distance / 1609.344) : 0;
       const paceMin   = Math.floor(paceSec / 60);
       const paceSecs  = Math.round(paceSec % 60);
-      const paceStr   = `${paceMin}:${String(paceSecs).padStart(2,'0')}`;
+      const paceStr   = paceSec > 0 ? `${paceMin}:${String(paceSecs).padStart(2,'0')}` : '—';
       const date      = r.start_date_local.split('T')[0];
-      // Guess type from duration
-      const type = durMin >= 30 && durMin <= 50 ? 'steady' : durMin < 30 ? 'interval' : 'easy';
+      const sportType = (r.sport_type || r.type || 'Run').toLowerCase();
+      // Map to run log type
+      const type = sportType === 'walk' || sportType === 'hike' ? 'easy' : durMin >= 30 && durMin <= 50 ? 'steady' : durMin < 30 ? 'interval' : 'easy';
       existing.push({
         id: Date.now() + Math.random(),
         strava_id: r.id,

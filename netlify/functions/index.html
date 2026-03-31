@@ -232,6 +232,12 @@
     <div class="sidebar-footer">
       <div class="goal-label">Goal weight</div>
       <div class="goal-chip" style="margin-bottom:14px;">220–225 lbs</div>
+      <div class="goal-label" style="margin-bottom:4px;">Strava</div>
+      <div id="strava-section" style="margin-bottom:12px;">
+        <button class="btn btn-ghost btn-sm" id="strava-btn" onclick="stravaConnect()" style="width:100%;justify-content:center;border-color:rgba(252,76,2,0.4);color:#fc4c02;">⚡ Connect Strava</button>
+        <div id="strava-status" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:6px;display:none;"></div>
+        <button class="btn btn-ghost btn-sm" id="strava-sync-btn" onclick="stravaSyncRuns()" style="width:100%;justify-content:center;margin-top:6px;display:none;">↓ Sync runs</button>
+      </div>
       <div class="goal-label" style="margin-bottom:4px;">Sync</div>
       <div id="sync-indicator" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:12px;">Loading...</div>
       <div class="goal-label" style="margin-bottom:8px;">Data</div>
@@ -1590,6 +1596,159 @@ function showPlanTab(tab, el) {
   el.style.borderColor = 'var(--accent)'; el.style.color = 'var(--accent)';
 }
 
+// ── Strava integration ────────────────────────────────
+const STRAVA_CLIENT_ID = '218912';
+const STRAVA_REDIRECT  = 'https://fittttt.netlify.app/strava-callback';
+const STRAVA_SCOPE     = 'activity:read_all';
+
+function stravaConnect() {
+  const url = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT)}&response_type=code&scope=${STRAVA_SCOPE}`;
+  window.location.href = url;
+}
+
+function stravaSetConnected(athleteName) {
+  document.getElementById('strava-btn').style.display = 'none';
+  const status = document.getElementById('strava-status');
+  status.style.display = 'block';
+  status.style.color = '#fc4c02';
+  status.textContent = '⚡ ' + (athleteName || 'Connected');
+  document.getElementById('strava-sync-btn').style.display = '';
+}
+
+async function stravaRefreshToken() {
+  const refreshToken = cacheGet('strava_refresh_token');
+  const expiresAt    = cacheGet('strava_expires_at');
+  if (!refreshToken) return null;
+  // Token still valid
+  if (expiresAt && Date.now() / 1000 < expiresAt - 60) {
+    return cacheGet('strava_access_token');
+  }
+  // Refresh it via our Netlify function
+  try {
+    const res = await fetch('/.netlify/functions/strava-refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      cacheSet('strava_access_token', data.access_token);
+      cacheSet('strava_expires_at', data.expires_at);
+      await sbWrite('strava_access_token', data.access_token);
+      await sbWrite('strava_expires_at', data.expires_at);
+      return data.access_token;
+    }
+  } catch(e) {}
+  return cacheGet('strava_access_token');
+}
+
+async function stravaSyncRuns() {
+  const btn = document.getElementById('strava-sync-btn');
+  btn.textContent = 'Syncing...';
+  btn.disabled = true;
+
+  const token = await stravaRefreshToken();
+  if (!token) { toast('Strava not connected'); btn.textContent = '↓ Sync runs'; btn.disabled = false; return; }
+
+  try {
+    const res = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=50&page=1', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const activities = await res.json();
+    if (!Array.isArray(activities)) { toast('Strava sync failed'); btn.textContent = '↓ Sync runs'; btn.disabled = false; return; }
+
+    const runs = activities.filter(a => {
+      const t = (a.sport_type || a.type || '').toLowerCase();
+      return ['run','walk','hike','trailrun','virtualrun'].includes(t);
+    });
+    const existing = getRuns();
+    const existingStravaIds = new Set(existing.filter(r => r.strava_id).map(r => r.strava_id));
+
+    let added = 0;
+    runs.forEach(r => {
+      if (existingStravaIds.has(r.id)) return;
+      const distMiles = (r.distance / 1609.344).toFixed(2);
+      const durMin    = Math.round(r.moving_time / 60);
+      const paceSec   = r.distance > 0 ? r.moving_time / (r.distance / 1609.344) : 0;
+      const paceMin   = Math.floor(paceSec / 60);
+      const paceSecs  = Math.round(paceSec % 60);
+      const paceStr   = paceSec > 0 ? `${paceMin}:${String(paceSecs).padStart(2,'0')}` : '—';
+      const date      = r.start_date_local.split('T')[0];
+      const sportType = (r.sport_type || r.type || 'Run').toLowerCase();
+      // Map to run log type
+      const type = sportType === 'walk' || sportType === 'hike' ? 'easy' : durMin >= 30 && durMin <= 50 ? 'steady' : durMin < 30 ? 'interval' : 'easy';
+      existing.push({
+        id: Date.now() + Math.random(),
+        strava_id: r.id,
+        date,
+        type,
+        distance: distMiles,
+        duration: durMin,
+        pace: paceStr,
+        notes: r.name || '',
+      });
+      added++;
+    });
+
+    if (added > 0) {
+      saveRuns(existing);
+      refreshDashboard();
+      renderHistory('all');
+      toast(`Synced ${added} run${added !== 1 ? 's' : ''} from Strava ✓`);
+    } else {
+      toast('All runs already up to date');
+    }
+  } catch(e) {
+    toast('Strava sync error — try again');
+  }
+  btn.textContent = '↓ Sync runs';
+  btn.disabled = false;
+}
+
+// Handle OAuth callback params on page load
+function stravaHandleCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const token   = params.get('strava_access_token');
+  const refresh = params.get('strava_refresh_token');
+  const expires = params.get('strava_expires_at');
+  const athlete = params.get('strava_athlete');
+  const error   = params.get('strava_error');
+
+  if (error) { toast('Strava connection failed: ' + error); return; }
+  if (!token) return;
+
+  // Store tokens
+  cacheSet('strava_access_token', token);
+  cacheSet('strava_refresh_token', refresh);
+  cacheSet('strava_expires_at', parseInt(expires));
+  sbWrite('strava_access_token', token);
+  sbWrite('strava_refresh_token', refresh);
+  sbWrite('strava_expires_at', parseInt(expires));
+
+  let athleteName = 'Connected';
+  try { athleteName = JSON.parse(athlete)?.name || 'Connected'; } catch {}
+  cacheSet('strava_athlete', athleteName);
+  sbWrite('strava_athlete', athleteName);
+
+  stravaSetConnected(athleteName);
+  toast('Strava connected ✓');
+
+  // Clean URL
+  window.history.replaceState({}, document.title, '/');
+}
+
+// Check if already connected on load
+async function stravaInit() {
+  // Pull tokens from Supabase if not in cache
+  const keys = ['strava_access_token','strava_refresh_token','strava_expires_at','strava_athlete'];
+  await Promise.all(keys.map(k => sbRead(k)));
+  const token = cacheGet('strava_access_token');
+  if (token) {
+    const name = cacheGet('strava_athlete') || 'Connected';
+    stravaSetConnected(name);
+  }
+}
+
 // ── Export / Import ───────────────────────────────────
 function exportData() {
   const data = {
@@ -1665,14 +1824,18 @@ function importData(event) {
 
 // ── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Handle Strava OAuth callback first
+  stravaHandleCallback();
   // Render immediately from cache so UI isn't blank
   refreshDashboard();
   document.getElementById('stats-date').value = today();
   document.getElementById('workout-date').value = today();
   document.getElementById('run-date').value = today();
   initWorkoutForm();
-  // Then pull latest from Supabase and refresh
+  // Pull latest from Supabase and refresh
   syncFromSupabase();
+  // Check if Strava already connected
+  stravaInit();
 });
 </script>
 

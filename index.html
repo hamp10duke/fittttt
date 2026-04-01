@@ -36,7 +36,8 @@
   /* Layout */
   .shell { display: flex; min-height: 100vh; }
   .sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; }
-  .main { margin-left: 220px; flex: 1; padding: 32px; max-width: 960px; }
+  .main { margin-left: 220px; flex: 1; padding: 32px; display: flex; justify-content: center; }
+  .main-inner { width: 100%; max-width: 900px; }
 
   /* Sidebar */
   .logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
@@ -204,10 +205,14 @@
   @media (max-width: 700px) {
     .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 12px; }
     .main { margin-left: 0; padding: 16px; }
+    .main-inner { max-width: 100%; }
     .shell { flex-direction: column; }
     .grid-4 { grid-template-columns: 1fr 1fr; }
     .grid-3 { grid-template-columns: 1fr 1fr; }
     .timer-bar { left: 0; }
+    .landing-cards { grid-template-columns: 1fr 1fr; max-width: 100%; }
+    .landing-today { grid-template-columns: 1fr 1fr; }
+    .landing-cards .landing-card:last-child { grid-column: span 2; }
   }
 
 </style>
@@ -280,6 +285,7 @@
 
   <!-- Main content -->
   <main class="main">
+  <div class="main-inner">
 
     <!-- HOME -->
     <div id="page-home" class="page active">
@@ -786,6 +792,7 @@
       </div>
     </div>
 
+  </div>
   </main>
 </div>
 <div class="toast" id="toast"></div>

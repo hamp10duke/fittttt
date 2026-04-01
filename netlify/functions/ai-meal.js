@@ -12,7 +12,7 @@ exports.handler = async (event) => {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-opus-20240229',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         messages: [{ role: 'user', content: `Break down this meal into individual food items and estimate nutritional content. Assume standard portions.\n\nMeal: "${description}"\n\nRespond with ONLY valid JSON, no markdown:\n{"meal_name":"short name","items":[{"name":"item name","cal":000,"protein":0.0,"carbs":0.0,"fat":0.0}]}` }]
       })

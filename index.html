@@ -184,6 +184,23 @@
   /* main padding for timer bar */
   .main.timer-visible { padding-bottom: 72px; }
 
+  /* Landing page */
+  .landing-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 120px); padding: 2rem 0; }
+  .landing-greeting { font-family: 'Instrument Serif', serif; font-size: 32px; color: var(--text); letter-spacing: -0.5px; margin-bottom: 6px; text-align: center; }
+  .landing-sub { font-size: 13px; color: var(--text3); margin-bottom: 40px; text-align: center; font-family: 'DM Mono', monospace; letter-spacing: 0.04em; }
+  .landing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 100%; max-width: 580px; margin-bottom: 32px; }
+  .landing-card { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 28px 16px 22px; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; transition: all 0.18s; text-align: center; }
+  .landing-card:hover { border-color: var(--accent); background: var(--accent-dim2); transform: translateY(-3px); }
+  .landing-card:active { transform: translateY(0); }
+  .landing-card-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+  .landing-card-label { font-size: 14px; font-weight: 500; color: var(--text); }
+  .landing-card-sub { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: -6px; line-height: 1.5; }
+  .landing-today { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 580px; }
+  .landing-stat { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; text-align: center; }
+  .landing-stat-val { font-family: 'DM Mono', monospace; font-size: 20px; color: var(--text); }
+  .landing-stat-label { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+  .landing-dash-link { font-size: 11px; color: var(--text3); cursor: pointer; margin-top: 20px; font-family: 'DM Mono', monospace; transition: color 0.15s; text-decoration: none; }
+  .landing-dash-link:hover { color: var(--accent); }
   @media (max-width: 700px) {
     .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 12px; }
     .main { margin-left: 0; padding: 16px; }
@@ -192,6 +209,7 @@
     .grid-3 { grid-template-columns: 1fr 1fr; }
     .timer-bar { left: 0; }
   }
+
 </style>
 </head>
 <body>
@@ -203,7 +221,11 @@
       <div class="logo-sub">fitness tracker</div>
     </div>
     <div class="nav-section">Track</div>
-    <div class="nav-item active" onclick="nav('dashboard')">
+    <div class="nav-item active" onclick="nav('home')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z"/></svg>
+      Home
+    </div>
+    <div class="nav-item" onclick="nav('dashboard')">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
       Dashboard
     </div>
@@ -258,6 +280,61 @@
 
   <!-- Main content -->
   <main class="main">
+
+    <!-- HOME -->
+    <div id="page-home" class="page active">
+      <div class="landing-wrap">
+        <div class="landing-greeting">What would you like to record?</div>
+        <div class="landing-sub" id="landing-date">Today</div>
+
+        <div class="landing-cards">
+          <!-- Weights -->
+          <div class="landing-card" onclick="navTo('log-workout')">
+            <div class="landing-card-icon" style="background:rgba(127,119,221,0.15);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7F77DD" stroke-width="1.8"><path d="M3 12h2m14 0h2M6 7l1 10M17 7l1 10M8 12h8"/></svg>
+            </div>
+            <div class="landing-card-label">Weights</div>
+            <div class="landing-card-sub" id="lc-workout">Log a session</div>
+          </div>
+
+          <!-- Cardio -->
+          <div class="landing-card" onclick="navTo('log-run')">
+            <div class="landing-card-icon" style="background:rgba(122,184,240,0.15);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7ab8f0" stroke-width="1.8"><circle cx="17" cy="4" r="2"/><path d="M9 9l4-3 2 5-5 3v6M6 21l3-4"/></svg>
+            </div>
+            <div class="landing-card-label">Cardio</div>
+            <div class="landing-card-sub" id="lc-run">Log a run or walk</div>
+          </div>
+
+          <!-- Food & drink -->
+          <div class="landing-card" onclick="navTo('food')">
+            <div class="landing-card-icon" style="background:rgba(184,240,122,0.12);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b8f07a" stroke-width="1.8"><path d="M8 3v7a4 4 0 008 0V3M12 14v7M10 21h4"/></svg>
+            </div>
+            <div class="landing-card-label">Food & drink</div>
+            <div class="landing-card-sub" id="lc-food">Log a meal</div>
+          </div>
+        </div>
+
+        <!-- Today's quick stats -->
+        <div class="landing-today">
+          <div class="landing-stat">
+            <div class="landing-stat-val" id="ls-cal">—</div>
+            <div class="landing-stat-label">Cal today</div>
+          </div>
+          <div class="landing-stat">
+            <div class="landing-stat-val" id="ls-workouts">—</div>
+            <div class="landing-stat-label">Workouts</div>
+          </div>
+          <div class="landing-stat">
+            <div class="landing-stat-val" id="ls-weight">—</div>
+            <div class="landing-stat-label">Weight</div>
+          </div>
+        </div>
+
+        <div class="landing-dash-link" onclick="navTo('dashboard')">View full dashboard →</div>
+      </div>
+    </div>
 
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
@@ -773,6 +850,7 @@ async function syncFromSupabase() {
   if (syncIndicator) { syncIndicator.textContent = 'Syncing...'; syncIndicator.style.color = 'var(--text3)'; }
   const keys = ['workouts', 'runs', 'bodystats', 'meals'];
   await Promise.all(keys.map(k => sbRead(k)));
+  refreshHome();
   refreshDashboard();
   renderStatsTable();
   renderHistory('all');
@@ -781,24 +859,52 @@ async function syncFromSupabase() {
 }
 
 // ── Navigation ────────────────────────────────────────
-function nav(page) {
+function navTo(page) {
+  // Programmatic nav without event requirement
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
-  event.currentTarget.classList.add('active');
+  // Highlight matching nav item
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + page + "'")) n.classList.add('active');
+  });
   if (page === 'dashboard') refreshDashboard();
   if (page === 'history') renderHistory('all');
-  if (page === 'charts') {
-    // Highlight default range button
-    const btns = document.querySelectorAll('#chart-range-btns .btn');
-    if (btns.length) { btns[0].style.borderColor = 'var(--accent)'; btns[0].style.color = 'var(--accent)'; }
-    renderCharts();
-  }
+  if (page === 'charts') { const btns = document.querySelectorAll('#chart-range-btns .btn'); if (btns.length) { btns[0].style.borderColor = 'var(--accent)'; btns[0].style.color = 'var(--accent)'; } renderCharts(); }
   if (page === 'body-stats') renderStatsTable();
   if (page === 'log-workout') { initWorkoutForm(); resetTimers(); timerShow(); }
   else timerHide();
   if (page === 'plan') renderPlanPage();
   if (page === 'food') initFoodPage();
+  if (page === 'home') refreshHome();
+}
+
+function nav(page) {
+  navTo(page);
+}
+
+function refreshHome() {
+  const now = new Date();
+  document.getElementById('landing-date').textContent = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+  // Today's calories
+  const food = getMealsSummaryForDate(today());
+  document.getElementById('ls-cal').textContent = food.count > 0 ? food.cal : '—';
+
+  // Total workouts
+  document.getElementById('ls-workouts').textContent = getWorkouts().length;
+
+  // Latest weight
+  const stats = getStats().sort((a,b) => a.date.localeCompare(b.date));
+  const latest = stats.filter(s=>s.weight).pop();
+  document.getElementById('ls-weight').textContent = latest ? latest.weight + ' lbs' : '—';
+
+  // Card subtitles — today's activity
+  const todayWorkouts = getWorkouts().filter(w => w.date === today());
+  const todayRuns = getRuns().filter(r => r.date === today());
+  document.getElementById('lc-workout').textContent = todayWorkouts.length ? '✓ Logged today' : 'Log a session';
+  document.getElementById('lc-run').textContent = todayRuns.length ? '✓ Logged today' : 'Log a run or walk';
+  document.getElementById('lc-food').textContent = food.count > 0 ? `${food.count} meal${food.count>1?'s':''} · ${food.cal} cal` : 'Log a meal';
 }
 
 function today() {
@@ -2605,17 +2711,13 @@ function importHevyCSV(event) {
 
 // ── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Handle Strava OAuth callback first
   stravaHandleCallback();
-  // Render immediately from cache so UI isn't blank
-  refreshDashboard();
+  refreshHome();
   document.getElementById('stats-date').value = today();
   document.getElementById('workout-date').value = today();
   document.getElementById('run-date').value = today();
   initWorkoutForm();
-  // Pull latest from Supabase and refresh
   syncFromSupabase();
-  // Check if Strava already connected
   stravaInit();
 });
 </script>

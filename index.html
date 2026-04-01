@@ -120,13 +120,29 @@
 
   /* Exercise log builder */
   .exercise-block { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px; }
-  .set-row { display: grid; grid-template-columns: auto 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .set-row { display: grid; grid-template-columns: 24px 1fr auto auto auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .set-row.bodyweight { grid-template-columns: 24px auto auto auto; }
   .set-num { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; width: 20px; text-align: center; }
   .btn-sm { padding: 5px 10px; font-size: 11px; }
   .btn-icon { background: transparent; border: 1px solid var(--border2); color: var(--text3); border-radius: var(--radius-sm); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; transition: all 0.15s; }
   .btn-icon:hover { color: var(--red); border-color: rgba(240,122,122,0.3); }
+  .btn-check { background: transparent; border: 1px solid var(--border2); color: var(--text3); border-radius: var(--radius-sm); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; transition: all 0.15s; }
+  .btn-check:hover { color: var(--accent); border-color: var(--accent); }
+  .btn-check.done { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
   .ex-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .ex-name-display { font-size: 14px; font-weight: 500; color: var(--text); }
+
+  /* Rep stepper */
+  .rep-stepper { display: flex; align-items: center; gap: 4px; opacity: 0.45; transition: opacity 0.2s; }
+  .rep-stepper.logged { opacity: 1; }
+  .rep-btn { background: var(--surface3); border: none; color: var(--text2); width: 26px; height: 26px; border-radius: 6px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; user-select: none; }
+  .rep-btn:hover { background: var(--surface); color: var(--text); }
+  .rep-val { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text); min-width: 32px; text-align: center; }
+
+  /* Timed set */
+  .set-timer { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--accent); min-width: 44px; text-align: center; cursor: pointer; padding: 3px 6px; border-radius: 6px; border: 1px solid rgba(184,240,122,0.3); }
+  .set-timer.running { background: var(--accent-dim); }
+  .set-timer.done { color: var(--accent2); }
 
   /* Divider */
   .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
@@ -137,7 +153,7 @@
   .empty-text { font-size: 13px; }
 
   /* Toast */
-  .toast { position: fixed; bottom: 24px; left: 24px; background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 12px 18px; font-size: 13px; color: var(--text); z-index: 1000; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; }
+  .toast { position: fixed; bottom: 64px; left: 24px; background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 12px 18px; font-size: 13px; color: var(--text); z-index: 1000; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; }
   .toast.show { opacity: 1; transform: translateY(0); }
 
   /* Week indicator */
@@ -147,36 +163,26 @@
   .week-dot.done { background: var(--accent-dim); border-color: rgba(184,240,122,0.3); color: var(--accent); }
   .week-dot.today { border-color: var(--accent); color: var(--accent); }
 
-  /* Timer — floating */
-  .timer-float { position: fixed; bottom: 24px; right: 24px; width: 260px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); box-shadow: 0 4px 24px rgba(0,0,0,0.4); z-index: 500; display: none; overflow: hidden; }
-  .timer-float.visible { display: block; }
-  .timer-float-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface2); cursor: pointer; user-select: none; }
-  .timer-float-header-label { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.07em; }
-  .timer-float-header-clock { font-family: 'DM Mono', monospace; font-size: 15px; color: var(--accent); letter-spacing: 1px; }
-  .timer-float-header-clock.paused { color: var(--text3); }
-  .timer-float-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
-  .timer-float.collapsed .timer-float-body { display: none; }
-  .timer-wt-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .timer-wt-btns { display: flex; gap: 5px; }
-  .timer-cd-compact { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; position: relative; overflow: hidden; }
-  .timer-cd-compact-bg { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
-  .timer-cd-compact.running .timer-cd-compact-bg { background: var(--accent); opacity: 0.06; }
-  .timer-cd-compact.done .timer-cd-compact-bg { background: var(--accent); opacity: 0.12; }
-  .timer-cd-compact-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
-  .timer-cd-compact-label { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; }
-  .timer-cd-compact-time { font-family: 'DM Mono', monospace; font-size: 20px; color: var(--text); transition: color 0.2s; }
-  .timer-cd-compact.running .timer-cd-compact-time { color: var(--accent); }
-  .timer-cd-compact.done .timer-cd-compact-time { color: var(--accent2); }
-  .timer-cd-bar { height: 3px; background: var(--surface3); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
-  .timer-cd-fill { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.9s linear; }
-  .timer-cd-compact-btns { display: flex; gap: 5px; }
-  .timer-collapse-icon { font-size: 11px; color: var(--text3); transition: transform 0.2s; }
-  .timer-float.collapsed .timer-collapse-icon { transform: rotate(180deg); }
+  /* Timer — bottom bar */
+  .timer-bar { position: fixed; bottom: 0; left: 220px; right: 0; height: 52px; background: var(--surface); border-top: 1px solid var(--border2); z-index: 500; display: none; align-items: center; padding: 0 20px; gap: 16px; }
+  .timer-bar.visible { display: flex; }
+  .timer-bar-clock { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text3); letter-spacing: 1px; white-space: nowrap; }
+  .timer-bar-clock.running { color: var(--accent); }
+  .timer-bar-sep { width: 1px; height: 24px; background: var(--border2); flex-shrink: 0; }
+  .timer-bar-cd { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .timer-bar-label { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+  .timer-bar-time { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 400; color: var(--text); min-width: 48px; }
+  .timer-bar-time.running { color: var(--accent); }
+  .timer-bar-time.done { color: var(--accent2); }
+  .timer-bar-progress { flex: 1; height: 3px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+  .timer-bar-fill { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.9s linear; }
+  .timer-bar-btns { display: flex; gap: 5px; flex-shrink: 0; }
+  .wt-bar-btns { display: flex; gap: 5px; flex-shrink: 0; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 4px; animation: pulse 2s infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+  /* main padding for timer bar */
+  .main.timer-visible { padding-bottom: 72px; }
 
   @media (max-width: 700px) {
     .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 12px; }
@@ -184,6 +190,7 @@
     .shell { flex-direction: column; }
     .grid-4 { grid-template-columns: 1fr 1fr; }
     .grid-3 { grid-template-columns: 1fr 1fr; }
+    .timer-bar { left: 0; }
   }
 </style>
 </head>
@@ -886,12 +893,14 @@ function wtStart() {
   wtSeconds = 0;
   const clk = document.getElementById('wt-clock');
   clk.classList.remove('paused');
+  clk.classList.add('running');
   document.getElementById('wt-btn-start').style.display = 'none';
   document.getElementById('wt-btn-pause').style.display = '';
   document.getElementById('wt-btn-reset').style.display = '';
   wtInterval = setInterval(() => {
     wtSeconds++;
     clk.textContent = wtFmt(wtSeconds);
+    liveSync({ wtSeconds, wtRunning: true });
   }, 1000);
 }
 
@@ -899,7 +908,9 @@ function wtPause() {
   if (!wtRunning) return;
   wtRunning = false;
   clearInterval(wtInterval);
-  document.getElementById('wt-clock').classList.add('paused');
+  const clk = document.getElementById('wt-clock');
+  clk.classList.remove('running');
+  clk.classList.add('paused');
   document.getElementById('wt-btn-pause').style.display = 'none';
   document.getElementById('wt-btn-resume').style.display = '';
 }
@@ -909,11 +920,13 @@ function wtResume() {
   wtRunning = true;
   const clk = document.getElementById('wt-clock');
   clk.classList.remove('paused');
+  clk.classList.add('running');
   document.getElementById('wt-btn-resume').style.display = 'none';
   document.getElementById('wt-btn-pause').style.display = '';
   wtInterval = setInterval(() => {
     wtSeconds++;
     clk.textContent = wtFmt(wtSeconds);
+    liveSync({ wtSeconds, wtRunning: true });
   }, 1000);
 }
 
@@ -923,6 +936,7 @@ function wtReset() {
   wtSeconds = 0;
   const clk = document.getElementById('wt-clock');
   clk.textContent = '00:00:00';
+  clk.classList.remove('running');
   clk.classList.add('paused');
   document.getElementById('wt-btn-start').style.display = '';
   document.getElementById('wt-btn-pause').style.display = 'none';
@@ -945,27 +959,25 @@ function cdFmt(s) {
 function cdStart(id, total) {
   const st = cdState[id];
   if (st.running) return;
-  // If already at 0 or unstarted, reset to full
   if (st.remaining <= 0) { st.remaining = total; st.total = total; }
   st.running = true;
-  const panel = document.getElementById('cd-' + id);
-  panel.className = 'timer-cd-compact running';
+  const timeEl = document.getElementById('cd-' + id + '-time');
+  const fillEl = document.getElementById('cd-' + id + '-fill');
+  if (timeEl) timeEl.className = 'timer-bar-time running';
   st.interval = setInterval(() => {
     st.remaining--;
-    document.getElementById('cd-' + id + '-time').textContent = cdFmt(st.remaining);
+    if (timeEl) timeEl.textContent = cdFmt(st.remaining);
     const pct = (st.remaining / st.total) * 100;
-    document.getElementById('cd-' + id + '-fill').style.width = pct + '%';
-    // Color bar red in last 10s
-    const fill = document.getElementById('cd-' + id + '-fill');
-    if (st.remaining <= 10) fill.style.background = 'var(--red)';
-    else if (st.remaining <= 20) fill.style.background = 'var(--amber)';
-    else fill.style.background = 'var(--accent)';
+    if (fillEl) {
+      fillEl.style.width = pct + '%';
+      if (st.remaining <= 10) fillEl.style.background = 'var(--red)';
+      else if (st.remaining <= 20) fillEl.style.background = 'var(--amber)';
+      else fillEl.style.background = 'var(--accent)';
+    }
     if (st.remaining <= 0) {
       clearInterval(st.interval);
       st.running = false;
-      panel.className = 'timer-cd-compact done';
-      document.getElementById('cd-' + id + '-time').textContent = 'Go!';
-      // Beep via Web Audio
+      if (timeEl) { timeEl.textContent = 'Go!'; timeEl.className = 'timer-bar-time done'; }
       cdBeep();
     }
   }, 1000);
@@ -977,10 +989,10 @@ function cdReset(id, total) {
   st.running = false;
   st.remaining = total;
   st.total = total;
-  document.getElementById('cd-' + id).className = 'timer-cd-compact';
-  document.getElementById('cd-' + id + '-time').textContent = cdFmt(total);
-  document.getElementById('cd-' + id + '-fill').style.width = '100%';
-  document.getElementById('cd-' + id + '-fill').style.background = 'var(--accent)';
+  const timeEl = document.getElementById('cd-' + id + '-time');
+  const fillEl = document.getElementById('cd-' + id + '-fill');
+  if (timeEl) { timeEl.textContent = cdFmt(total); timeEl.className = 'timer-bar-time'; }
+  if (fillEl) { fillEl.style.width = '100%'; fillEl.style.background = 'var(--accent)'; }
 }
 
 function cdBeep() {
@@ -1006,12 +1018,17 @@ function resetTimers() {
   cdReset('ex', 180);
 }
 
-function timerToggleCollapse() {
-  document.getElementById('timer-float').classList.toggle('collapsed');
+function timerToggleCollapse() {}
+function timerShow() {
+  document.getElementById('timer-bar').classList.add('visible');
+  document.querySelector('.main').classList.add('timer-visible');
+  startLiveSync();
 }
-
-function timerShow() { document.getElementById('timer-float').classList.add('visible'); }
-function timerHide() { document.getElementById('timer-float').classList.remove('visible'); }
+function timerHide() {
+  document.getElementById('timer-bar').classList.remove('visible');
+  document.querySelector('.main').classList.remove('timer-visible');
+  stopLiveSync();
+}
 const PLAN = {
   push: [
     { name: 'Barbell bench press',           sets: 4, reps: '5–6',   note: 'Primary chest driver' },
@@ -1081,16 +1098,119 @@ const PLAN = {
 
 // ── Workout form ──────────────────────────────────────
 let exCount = 0;
+const TIMED_PATTERN = /(\d+)\s*sec/i;
+const BODYWEIGHT_TYPES = ['travel_push','travel_pull','travel_legs'];
+
+function isBodyweightWorkout() {
+  return BODYWEIGHT_TYPES.includes(document.getElementById('workout-type').value);
+}
+
+function parseSecs(repsStr) {
+  const m = String(repsStr).match(TIMED_PATTERN);
+  return m ? parseInt(m[1]) : null;
+}
+
 function initWorkoutForm() {
   document.getElementById('workout-date').value = today();
   document.getElementById('exercise-blocks').innerHTML = '';
   exCount = 0;
-  // Wire type selector to update hint
   const sel = document.getElementById('workout-type');
   sel.onchange = () => {
     const hint = document.getElementById('preset-hint');
     hint.style.display = PLAN[sel.value] ? 'block' : 'none';
   };
+}
+
+function buildSetRow(exId, setNum, repsDefault, isBodyweight, rowClass) {
+  const isTimed = parseSecs(repsDefault) !== null;
+  const secs = parseSecs(repsDefault);
+  const uid = `ex${exId}s${setNum}_${Date.now()}`;
+
+  const row = document.createElement('div');
+  row.className = 'set-row' + (isBodyweight ? ' bodyweight' : '');
+  row.dataset.logged = '0';
+
+  let weightHtml = isBodyweight ? '' : `<input type="number" placeholder="lbs" step="2.5" style="font-size:13px;">`;
+
+  let repHtml;
+  if (isTimed) {
+    repHtml = `<div class="set-timer" id="st-${uid}" data-secs="${secs}" onclick="toggleSetTimer('${uid}',${secs})">${cdFmt(secs)}</div>`;
+  } else {
+    const initVal = isNaN(parseInt(repsDefault)) ? 10 : parseInt(repsDefault);
+    repHtml = `<div class="rep-stepper" id="rs-${uid}">
+      <button class="rep-btn" onclick="stepRep('${uid}',-1)">−</button>
+      <span class="rep-val" id="rv-${uid}">${initVal}</span>
+      <button class="rep-btn" onclick="stepRep('${uid}',1)">+</button>
+    </div>`;
+  }
+
+  row.innerHTML = `
+    <span class="set-num">${setNum}</span>
+    ${weightHtml}
+    ${repHtml}
+    <button class="btn-check" id="chk-${uid}" onclick="logSet('${uid}',${isTimed},${secs||0})" title="Mark done">✓</button>
+    <button class="btn-icon" onclick="this.closest('.set-row').remove()" title="Remove">×</button>
+  `;
+  return row;
+}
+
+function stepRep(uid, delta) {
+  const el = document.getElementById('rv-' + uid);
+  if (!el) return;
+  const current = parseInt(el.textContent) || 0;
+  el.textContent = Math.max(0, current + delta);
+}
+
+// Per-set countdown timers
+const setTimers = {};
+function toggleSetTimer(uid, secs) {
+  const el = document.getElementById('st-' + uid);
+  if (!el) return;
+  if (setTimers[uid]?.running) return;
+  const st = { running: true, remaining: secs, total: secs };
+  setTimers[uid] = st;
+  el.classList.add('running');
+  st.interval = setInterval(() => {
+    st.remaining--;
+    el.textContent = cdFmt(st.remaining);
+    if (st.remaining <= 0) {
+      clearInterval(st.interval);
+      st.running = false;
+      el.textContent = 'Done!';
+      el.classList.remove('running');
+      el.classList.add('done');
+      cdBeep();
+      // Auto-check the set
+      logSet(uid, true, secs);
+    }
+  }, 1000);
+}
+
+function logSet(uid, isTimed, secs) {
+  const chk = document.getElementById('chk-' + uid);
+  if (!chk) return;
+  const row = chk.closest('.set-row');
+  if (!row || row.dataset.logged === '1') return;
+  row.dataset.logged = '1';
+  chk.classList.add('done');
+
+  // Mark rep stepper as logged (full opacity)
+  const rs = document.getElementById('rs-' + uid);
+  if (rs) rs.classList.add('logged');
+
+  // Auto-start rest timers
+  const exBlock = row.closest('.exercise-block');
+  const allRows = exBlock ? [...exBlock.querySelectorAll('.set-row')] : [];
+  const isLast = allRows.indexOf(row) === allRows.length - 1;
+  if (isLast) {
+    cdReset('set', 60); cdReset('ex', 180); cdStart('ex', 180);
+  } else {
+    cdReset('set', 60); cdStart('set', 60);
+  }
+  if (!wtRunning && wtSeconds === 0) wtStart();
+
+  // Push live state
+  liveSync({ lastSetAt: Date.now() });
 }
 
 function loadPreset() {
@@ -1100,22 +1220,16 @@ function loadPreset() {
   document.getElementById('exercise-blocks').innerHTML = '';
   exCount = 0;
   document.getElementById('preset-hint').style.display = 'none';
+  const isBodyweight = BODYWEIGHT_TYPES.includes(type);
   exercises.forEach(ex => {
     exCount++;
     const id = 'ex-' + exCount;
     const div = document.createElement('div');
     div.className = 'exercise-block';
     div.id = id;
-    // Build set rows HTML — one row per set with reps pre-filled
-    let setRowsHtml = '';
-    for (let s = 1; s <= ex.sets; s++) {
-      setRowsHtml += `<div class="set-row">
-        <span class="set-num">${s}</span>
-        <input type="number" placeholder="lbs" step="2.5">
-        <input type="text" value="${ex.reps}" placeholder="reps">
-        <button class="btn-icon" onclick="this.parentElement.remove()" title="Remove">×</button>
-      </div>`;
-    }
+    const colHeader = isBodyweight
+      ? `<div style="display:grid;grid-template-columns:24px auto auto auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;padding:0 0 2px 0;"><span></span><span>Reps / time</span><span></span><span></span></div>`
+      : `<div style="display:grid;grid-template-columns:24px 1fr auto auto auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;padding:0 0 2px 0;"><span></span><span>Weight (lbs)</span><span>Reps / time</span><span></span><span></span></div>`;
     div.innerHTML = `
       <div class="ex-header">
         <div style="flex:1;">
@@ -1124,36 +1238,35 @@ function loadPreset() {
         </div>
         <button class="btn-icon" onclick="document.getElementById('${id}').remove()" title="Remove" style="margin-left:10px;">×</button>
       </div>
-      <div style="display:grid;grid-template-columns:60px 1fr 1fr auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;padding:0 0 2px 28px;">
-        <span></span><span>Weight (lbs)</span><span>Reps / target</span><span></span>
-      </div>
-      <div class="set-rows-${exCount}">${setRowsHtml}</div>
+      ${colHeader}
+      <div class="set-rows-${exCount}"></div>
       <button class="btn btn-ghost btn-sm" onclick="addSet(${exCount})" style="margin-top:6px;">+ Set</button>
     `;
     document.getElementById('exercise-blocks').appendChild(div);
-    // Wire reps inputs in preset rows to auto-timer
-    div.querySelectorAll('.set-row').forEach(row => {
-      const repsInput = row.querySelectorAll('input')[1];
-      if (repsInput) repsInput.addEventListener('blur', () => onSetComplete(repsInput));
-    });
+    const container = div.querySelector('.set-rows-' + exCount);
+    for (let s = 1; s <= ex.sets; s++) {
+      container.appendChild(buildSetRow(exCount, s, ex.reps, isBodyweight));
+    }
   });
-  toast('Plan loaded — fill in your weights');
+  toast('Plan loaded — log your sets');
 }
 
 function addExercise() {
   exCount++;
   const id = 'ex-' + exCount;
+  const isBodyweight = isBodyweightWorkout();
   const div = document.createElement('div');
   div.className = 'exercise-block';
   div.id = id;
+  const colHeader = isBodyweight
+    ? `<div style="display:grid;grid-template-columns:24px auto auto auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;"><span></span><span>Reps / time</span><span></span><span></span></div>`
+    : `<div style="display:grid;grid-template-columns:24px 1fr auto auto auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;"><span></span><span>Weight (lbs)</span><span>Reps</span><span></span><span></span></div>`;
   div.innerHTML = `
     <div class="ex-header">
       <input type="text" placeholder="Exercise name" style="width:auto;flex:1;background:transparent;border:none;border-bottom:1px solid var(--border2);border-radius:0;padding:4px 0;font-size:14px;font-weight:500;" class="ex-name-input">
       <button class="btn-icon" onclick="document.getElementById('${id}').remove()" title="Remove">×</button>
     </div>
-    <div style="display:grid;grid-template-columns:60px 1fr 1fr auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;padding:0 0 2px 28px;">
-      <span></span><span>Weight (lbs)</span><span>Reps</span><span></span>
-    </div>
+    ${colHeader}
     <div class="set-rows-${exCount}"></div>
     <button class="btn btn-ghost btn-sm" onclick="addSet(${exCount})" style="margin-top:6px;">+ Set</button>
   `;
@@ -1161,49 +1274,11 @@ function addExercise() {
   addSet(exCount);
 }
 
-function onSetComplete(repsInput) {
-  // Only fire if a value was actually entered
-  if (!repsInput.value.trim()) return;
-
-  const setRow = repsInput.closest('.set-row');
-  const exBlock = repsInput.closest('.exercise-block');
-  if (!setRow || !exBlock) return;
-
-  // Is this the last set row in this exercise block?
-  const allSetRows = exBlock.querySelectorAll('.set-row');
-  const isLastSet = setRow === allSetRows[allSetRows.length - 1];
-
-  if (isLastSet) {
-    // Last set of exercise — start 3-min between-exercise timer
-    cdReset('set', 60);   // reset set timer so it's clean
-    cdReset('ex', 180);
-    cdStart('ex', 180);
-    toast('Last set done — 3 min rest started');
-  } else {
-    // Mid-exercise — start 60s between-set timer
-    cdReset('set', 60);
-    cdStart('set', 60);
-  }
-
-  // Auto-start the workout stopwatch on first set logged
-  if (!wtRunning && wtSeconds === 0) wtStart();
-}
-
 function addSet(exId) {
   const container = document.querySelector('.set-rows-' + exId);
   const setNum = container.children.length + 1;
-  const row = document.createElement('div');
-  row.className = 'set-row';
-  row.innerHTML = `
-    <span class="set-num">${setNum}</span>
-    <input type="number" placeholder="lbs" step="2.5">
-    <input type="number" placeholder="reps">
-    <button class="btn-icon" onclick="this.parentElement.remove()" title="Remove">×</button>
-  `;
-  // Wire reps input blur → auto-timer
-  const repsInput = row.querySelectorAll('input')[1];
-  repsInput.addEventListener('blur', () => onSetComplete(repsInput));
-  container.appendChild(row);
+  const isBodyweight = isBodyweightWorkout();
+  container.appendChild(buildSetRow(exId, setNum, '10', isBodyweight));
 }
 
 function saveWorkout() {
@@ -1214,14 +1289,18 @@ function saveWorkout() {
 
   const exercises = [];
   document.querySelectorAll('.exercise-block').forEach(block => {
-    const name = block.querySelector('.ex-name-input').value.trim();
+    const name = block.querySelector('.ex-name-input')?.value.trim();
     if (!name) return;
     const sets = [];
     block.querySelectorAll('.set-row').forEach(row => {
-      const inputs = row.querySelectorAll('input');
-      const weight = inputs[0].value;
-      const reps = inputs[1].value;
-      if (weight || reps) sets.push({ weight, reps });
+      const weightInput = row.querySelector('input[type="number"]');
+      const weight = weightInput ? weightInput.value : '';
+      // Get reps from stepper or timed display
+      const repVal = row.querySelector('.rep-val');
+      const setTimer = row.querySelector('.set-timer');
+      const reps = repVal ? repVal.textContent : (setTimer ? setTimer.dataset.secs + 's' : '');
+      const logged = row.dataset.logged === '1';
+      if (logged || weight || reps) sets.push({ weight, reps, logged });
     });
     if (sets.length) exercises.push({ name, sets });
   });
@@ -1234,6 +1313,80 @@ function saveWorkout() {
   document.getElementById('exercise-blocks').innerHTML = '';
   exCount = 0;
   addExercise();
+  // Clear live session
+  sbWrite('live_session', null);
+}
+
+// ── Live session sync (Supabase real-time) ────────────
+let liveChannel = null;
+let liveDebounce = null;
+let isReceiving = false;
+
+function liveSync(patch) {
+  if (isReceiving) return;
+  clearTimeout(liveDebounce);
+  liveDebounce = setTimeout(async () => {
+    const session = {
+      ts: Date.now(),
+      wtSeconds,
+      wtRunning,
+      exercises: serializeSession(),
+      ...patch
+    };
+    await sbWrite('live_session', session);
+  }, 300);
+}
+
+function serializeSession() {
+  const blocks = [];
+  document.querySelectorAll('.exercise-block').forEach(block => {
+    const name = block.querySelector('.ex-name-input')?.value || '';
+    const sets = [];
+    block.querySelectorAll('.set-row').forEach(row => {
+      const weightInput = row.querySelector('input[type="number"]');
+      const repVal = row.querySelector('.rep-val');
+      const setTimer = row.querySelector('.set-timer');
+      sets.push({
+        weight: weightInput?.value || '',
+        reps: repVal ? repVal.textContent : (setTimer?.dataset.secs + 's' || ''),
+        logged: row.dataset.logged === '1'
+      });
+    });
+    blocks.push({ name, sets });
+  });
+  return blocks;
+}
+
+function startLiveSync() {
+  if (liveChannel) liveChannel.unsubscribe();
+  document.getElementById('live-dot').style.display = '';
+
+  liveChannel = {
+    _poll: setInterval(async () => {
+      const data = await sbRead('live_session');
+      if (!data || !data.ts) return;
+      // Only apply if from another device (timestamp differs by >2s from local)
+      if (Math.abs(data.ts - Date.now()) < 2000) return;
+      applyLiveSession(data);
+    }, 3000),
+    unsubscribe() { clearInterval(this._poll); }
+  };
+}
+
+function stopLiveSync() {
+  if (liveChannel) { liveChannel.unsubscribe(); liveChannel = null; }
+  document.getElementById('live-dot').style.display = 'none';
+}
+
+function applyLiveSession(data) {
+  isReceiving = true;
+  // Sync workout clock
+  if (data.wtSeconds !== undefined) {
+    wtSeconds = data.wtSeconds;
+    const clk = document.getElementById('wt-clock');
+    if (clk) clk.textContent = wtFmt(wtSeconds);
+  }
+  isReceiving = false;
 }
 
 // ── Run log ───────────────────────────────────────────
@@ -1925,48 +2078,41 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<!-- Floating timer widget -->
-<div class="timer-float" id="timer-float">
-  <div class="timer-float-header" onclick="timerToggleCollapse()">
-    <div class="timer-float-header-label">Workout timer</div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div class="timer-float-header-clock paused" id="wt-clock">00:00:00</div>
-      <span class="timer-collapse-icon">▲</span>
+<!-- Timer bottom bar -->
+<div class="timer-bar" id="timer-bar">
+  <!-- Live sync dot -->
+  <div class="live-dot" id="live-dot" style="display:none" title="Live sync active"></div>
+  <!-- Workout clock -->
+  <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+    <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;">Session</div>
+    <div class="timer-bar-clock paused" id="wt-clock">00:00:00</div>
+  </div>
+  <div class="wt-bar-btns">
+    <button class="btn btn-ghost btn-sm" id="wt-btn-start" onclick="wtStart()">▶</button>
+    <button class="btn btn-ghost btn-sm" id="wt-btn-pause" onclick="wtPause()" style="display:none">⏸</button>
+    <button class="btn btn-ghost btn-sm" id="wt-btn-resume" onclick="wtResume()" style="display:none">▶</button>
+    <button class="btn btn-ghost btn-sm" id="wt-btn-reset" onclick="wtReset()" style="display:none">↺</button>
+  </div>
+  <div class="timer-bar-sep"></div>
+  <!-- Sets countdown -->
+  <div class="timer-bar-cd">
+    <div class="timer-bar-label">Sets</div>
+    <div class="timer-bar-time" id="cd-set-time">1:00</div>
+    <div class="timer-bar-progress"><div class="timer-bar-fill" id="cd-set-fill" style="width:100%"></div></div>
+    <div class="timer-bar-btns">
+      <button class="btn btn-ghost btn-sm" onclick="cdStart('set',60)">▶</button>
+      <button class="btn btn-ghost btn-sm" onclick="cdReset('set',60)">↺</button>
     </div>
   </div>
-  <div class="timer-float-body">
-    <div class="timer-wt-row">
-      <div style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;">Workout time</div>
-      <div class="timer-wt-btns">
-        <button class="btn btn-ghost btn-sm" id="wt-btn-start" onclick="wtStart()">▶ Start</button>
-        <button class="btn btn-ghost btn-sm" id="wt-btn-pause" onclick="wtPause()" style="display:none">⏸</button>
-        <button class="btn btn-ghost btn-sm" id="wt-btn-resume" onclick="wtResume()" style="display:none">▶</button>
-        <button class="btn btn-ghost btn-sm" id="wt-btn-reset" onclick="wtReset()" style="display:none">↺</button>
-      </div>
-    </div>
-    <div class="timer-cd-compact" id="cd-set">
-      <div class="timer-cd-compact-bg"></div>
-      <div class="timer-cd-compact-top">
-        <span class="timer-cd-compact-label">Between sets</span>
-        <span class="timer-cd-compact-time" id="cd-set-time">1:00</span>
-      </div>
-      <div class="timer-cd-bar"><div class="timer-cd-fill" id="cd-set-fill" style="width:100%"></div></div>
-      <div class="timer-cd-compact-btns">
-        <button class="btn btn-ghost btn-sm" onclick="cdStart('set',60)">▶ Start</button>
-        <button class="btn btn-ghost btn-sm" onclick="cdReset('set',60)">↺ Reset</button>
-      </div>
-    </div>
-    <div class="timer-cd-compact" id="cd-ex">
-      <div class="timer-cd-compact-bg"></div>
-      <div class="timer-cd-compact-top">
-        <span class="timer-cd-compact-label">Between exercises</span>
-        <span class="timer-cd-compact-time" id="cd-ex-time">3:00</span>
-      </div>
-      <div class="timer-cd-bar"><div class="timer-cd-fill" id="cd-ex-fill" style="width:100%"></div></div>
-      <div class="timer-cd-compact-btns">
-        <button class="btn btn-ghost btn-sm" onclick="cdStart('ex',180)">▶ Start</button>
-        <button class="btn btn-ghost btn-sm" onclick="cdReset('ex',180)">↺ Reset</button>
-      </div>
+  <div class="timer-bar-sep"></div>
+  <!-- Exercise countdown -->
+  <div class="timer-bar-cd">
+    <div class="timer-bar-label">Exercise</div>
+    <div class="timer-bar-time" id="cd-ex-time">3:00</div>
+    <div class="timer-bar-progress"><div class="timer-bar-fill" id="cd-ex-fill" style="width:100%"></div></div>
+    <div class="timer-bar-btns">
+      <button class="btn btn-ghost btn-sm" onclick="cdStart('ex',180)">▶</button>
+      <button class="btn btn-ghost btn-sm" onclick="cdReset('ex',180)">↺</button>
     </div>
   </div>
 </div>

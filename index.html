@@ -1441,7 +1441,10 @@ function renderStatsTable() {
       <td class="num">${s.chest ? s.chest + '"' : '—'}</td>
       <td class="num">${s.hips ? s.hips + '"' : '—'}</td>
       <td style="color:var(--text3);font-size:12px;">${s.notes || ''}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteStat(${s.id})">Delete</button></td>
+      <td style="white-space:nowrap;display:flex;gap:4px;">
+        <button class="btn btn-ghost btn-sm" onclick="editStat(${s.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteStat(${s.id})">Delete</button>
+      </td>
     </tr>`).join('');
 }
 
@@ -1449,6 +1452,32 @@ function deleteStat(id) {
   saveBodyStats(getStats().filter(s => s.id !== id));
   renderStatsTable();
   toast('Entry deleted');
+}
+
+function editStat(id) {
+  const s = getStats().find(s => s.id === id);
+  if (!s) return;
+  document.getElementById('stats-date').value = s.date;
+  document.getElementById('stats-weight').value = s.weight || '';
+  document.getElementById('stats-waist').value = s.waist || '';
+  document.getElementById('stats-chest').value = s.chest || '';
+  document.getElementById('stats-hips').value = s.hips || '';
+  document.getElementById('stats-notes').value = s.notes || '';
+  const btn = document.querySelector('#page-body-stats .btn-primary');
+  if (btn) { btn.textContent = 'Update entry'; btn.setAttribute('onclick', `updateStat(${id})`); }
+  document.querySelector('#page-body-stats .card').scrollIntoView({ behavior: 'smooth' });
+  toast('Editing entry — make changes and save');
+}
+
+function updateStat(id) {
+  const stats = getStats().filter(s => s.id !== id);
+  stats.push({ id, date: document.getElementById('stats-date').value, weight: document.getElementById('stats-weight').value, waist: document.getElementById('stats-waist').value, chest: document.getElementById('stats-chest').value, hips: document.getElementById('stats-hips').value, notes: document.getElementById('stats-notes').value });
+  saveBodyStats(stats);
+  toast('Entry updated ✓');
+  const btn = document.querySelector('#page-body-stats .btn-primary');
+  if (btn) { btn.textContent = 'Save entry'; btn.setAttribute('onclick', 'saveStats()'); }
+  ['stats-weight','stats-waist','stats-chest','stats-hips','stats-notes'].forEach(id => document.getElementById(id).value = '');
+  renderStatsTable();
 }
 
 // ── History ───────────────────────────────────────────
@@ -1483,18 +1512,149 @@ function renderHistory(filter) {
       ? `${a.distance || '—'} mi · ${a.duration || '—'} min · ${a.pace || '—'} /mi`
       : (a.exercises||[]).map(e => `<span style="display:inline-block;margin-right:8px;">${e.name} <span style="color:var(--text3)">(${e.sets.length} sets)</span></span>`).join('');
     const delFn = a.kind === 'run' ? `deleteRun(${a.id})` : `deleteWorkout(${a.id})`;
+    const editFn = a.kind === 'run' ? `editRun(${a.id})` : `editWorkout(${a.id})`;
     return `<tr>
       <td class="num" style="white-space:nowrap">${a.date}</td>
       <td>${tag}</td>
       <td style="font-size:12px;color:var(--text2);">${detail}</td>
       <td style="font-size:12px;color:var(--text3);">${(a.notes||'').slice(0,50)}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="${delFn}">Delete</button></td>
+      <td style="white-space:nowrap;display:flex;gap:4px;">
+        <button class="btn btn-ghost btn-sm" onclick="${editFn}">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="${delFn}">Delete</button>
+      </td>
     </tr>`;
   }).join('');
 }
 
 function deleteWorkout(id) { saveWorkouts(getWorkouts().filter(w => w.id !== id)); renderHistory(historyFilter); toast('Deleted'); }
 function deleteRun(id) { saveRuns(getRuns().filter(r => r.id !== id)); renderHistory(historyFilter); toast('Deleted'); }
+
+function editRun(id) {
+  const run = getRuns().find(r => r.id === id);
+  if (!run) return;
+  // Navigate to log run and pre-populate
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-log-run').classList.add('active');
+  document.getElementById('run-date').value = run.date;
+  document.getElementById('run-type').value = run.type || 'steady';
+  document.getElementById('run-distance').value = run.distance || '';
+  document.getElementById('run-duration').value = run.duration || '';
+  document.getElementById('run-pace').value = run.pace || '';
+  document.getElementById('run-notes').value = run.notes || '';
+  // Change save button to update
+  const btn = document.querySelector('#page-log-run .btn-primary');
+  btn.textContent = 'Update run';
+  btn.onclick = () => updateRun(id);
+  toast('Editing run — make changes and save');
+}
+
+function updateRun(id) {
+  const runs = getRuns().filter(r => r.id !== id);
+  runs.push({
+    id,
+    strava_id: getRuns().find(r => r.id === id)?.strava_id,
+    date: document.getElementById('run-date').value,
+    type: document.getElementById('run-type').value,
+    distance: document.getElementById('run-distance').value,
+    duration: document.getElementById('run-duration').value,
+    pace: document.getElementById('run-pace').value,
+    notes: document.getElementById('run-notes').value,
+  });
+  saveRuns(runs);
+  toast('Run updated ✓');
+  // Reset save button
+  const btn = document.querySelector('#page-log-run .btn-primary');
+  btn.textContent = 'Save run';
+  btn.onclick = saveRun;
+  ['run-distance','run-duration','run-pace','run-notes'].forEach(id => document.getElementById(id).value = '');
+}
+
+function editWorkout(id) {
+  const workout = getWorkouts().find(w => w.id === id);
+  if (!workout) return;
+  // Navigate to log workout
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-log-workout').classList.add('active');
+  initWorkoutForm();
+  resetTimers();
+  timerShow();
+  document.getElementById('workout-date').value = workout.date;
+  document.getElementById('workout-type').value = workout.type || 'push';
+  document.getElementById('workout-notes').value = workout.notes || '';
+  // Pre-fill exercises
+  document.getElementById('exercise-blocks').innerHTML = '';
+  exCount = 0;
+  const isBodyweight = BODYWEIGHT_TYPES.includes(workout.type);
+  (workout.exercises || []).forEach(ex => {
+    exCount++;
+    const id = 'ex-' + exCount;
+    const div = document.createElement('div');
+    div.className = 'exercise-block';
+    div.id = id;
+    const colHeader = isBodyweight
+      ? `<div style="display:grid;grid-template-columns:24px auto auto auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;"><span></span><span>Reps / time</span><span></span><span></span></div>`
+      : `<div style="display:grid;grid-template-columns:24px 1fr auto auto auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;"><span></span><span>Weight (lbs)</span><span>Reps</span><span></span><span></span></div>`;
+    div.innerHTML = `
+      <div class="ex-header">
+        <div style="flex:1;">
+          <input type="text" value="${ex.name}" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border2);border-radius:0;padding:4px 0;font-size:14px;font-weight:500;color:var(--text);" class="ex-name-input">
+        </div>
+        <button class="btn-icon" onclick="document.getElementById('${id}').remove()" title="Remove" style="margin-left:10px;">×</button>
+      </div>
+      ${colHeader}
+      <div class="set-rows-${exCount}"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addSet(${exCount})" style="margin-top:6px;">+ Set</button>
+    `;
+    document.getElementById('exercise-blocks').appendChild(div);
+    const container = div.querySelector('.set-rows-' + exCount);
+    (ex.sets || []).forEach((set, i) => {
+      const row = buildSetRow(exCount, i + 1, set.reps || '10', isBodyweight);
+      // Pre-fill weight
+      const weightInput = row.querySelector('input[type="number"]');
+      if (weightInput && set.weight) weightInput.value = set.weight;
+      // Pre-fill reps in stepper
+      const repVal = row.querySelector('.rep-val');
+      if (repVal && set.reps) repVal.textContent = parseInt(set.reps) || set.reps;
+      if (set.logged) { row.dataset.logged = '1'; row.querySelector('.btn-check')?.classList.add('done'); row.querySelector('.rep-stepper')?.classList.add('logged'); }
+      container.appendChild(row);
+    });
+  });
+  // Change save button to update
+  const btn = document.querySelector('#page-log-workout .btn-primary[onclick="saveWorkout()"]');
+  if (btn) { btn.textContent = 'Update workout'; btn.setAttribute('onclick', `updateWorkout(${id})`); }
+  toast('Editing workout — make changes and save');
+}
+
+function updateWorkout(id) {
+  const date = document.getElementById('workout-date').value;
+  const type = document.getElementById('workout-type').value;
+  const notes = document.getElementById('workout-notes').value;
+  const exercises = [];
+  document.querySelectorAll('.exercise-block').forEach(block => {
+    const name = block.querySelector('.ex-name-input')?.value.trim();
+    if (!name) return;
+    const sets = [];
+    block.querySelectorAll('.set-row').forEach(row => {
+      const weightInput = row.querySelector('input[type="number"]');
+      const repVal = row.querySelector('.rep-val');
+      const setTimer = row.querySelector('.set-timer');
+      sets.push({ weight: weightInput?.value || '', reps: repVal ? repVal.textContent : (setTimer?.dataset.secs + 's' || ''), logged: row.dataset.logged === '1' });
+    });
+    if (sets.length) exercises.push({ name, sets });
+  });
+  const workouts = getWorkouts().filter(w => w.id !== id);
+  workouts.push({ id, date, type, notes, exercises });
+  saveWorkouts(workouts);
+  toast('Workout updated ✓');
+  // Reset save button
+  const btn = document.querySelector(`#page-log-workout .btn-primary`);
+  if (btn) { btn.textContent = 'Save workout'; btn.setAttribute('onclick', 'saveWorkout()'); }
+  document.getElementById('exercise-blocks').innerHTML = '';
+  exCount = 0;
+  addExercise();
+}
 
 // ── Charts ────────────────────────────────────────────
 let chartInstances = {};
@@ -1721,6 +1881,7 @@ function renderFoodPage() {
           <span class="tag ${mealTagClass[m.mealType] || 'tag-push'}">${mealTypeLabel[m.mealType]||m.mealType}</span>
           <span style="font-size:14px;font-weight:500;color:var(--text);flex:1;">${m.mealName}</span>
           <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${Math.round(mCal)} cal · ${mPro.toFixed(0)}g pro</span>
+          <button class="btn btn-ghost btn-sm" onclick="editMeal(${m.id})" style="margin-left:auto;">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="deleteMeal(${m.id})">Delete</button>
         </div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;padding:0 0 4px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;">
@@ -1737,6 +1898,68 @@ function getMealsSummaryForDate(date) {
   const meals = getMeals().filter(m => m.date === date);
   let cal = 0; meals.forEach(m => m.items.forEach(i => cal += i.cal));
   return { count: meals.length, cal: Math.round(cal) };
+}
+
+function editMeal(id) {
+  const meal = getMeals().find(m => m.id === id);
+  if (!meal) return;
+  // Pre-populate the log form
+  document.getElementById('food-meal-type').value = meal.mealType || 'breakfast';
+  document.getElementById('food-meal-name').value = meal.mealName || '';
+  document.getElementById('food-notes').value = meal.notes || '';
+  // Clear and refill items
+  document.getElementById('food-item-rows').innerHTML = '';
+  foodItemCount = 0;
+  meal.items.forEach(item => {
+    foodItemCount++;
+    const iid = 'fi-' + foodItemCount;
+    const div = document.createElement('div');
+    div.id = iid;
+    div.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;';
+    div.innerHTML = `
+      <input type="text" value="${item.name}" style="font-size:13px;">
+      <input type="number" value="${Math.round(item.cal)}" min="0" style="font-size:13px;" class="fi-cal">
+      <input type="number" value="${item.protein.toFixed(1)}" min="0" step="0.1" style="font-size:13px;" class="fi-pro">
+      <input type="number" value="${item.carbs.toFixed(1)}" min="0" step="0.1" style="font-size:13px;" class="fi-carb">
+      <input type="number" value="${item.fat.toFixed(1)}" min="0" step="0.1" style="font-size:13px;" class="fi-fat">
+      <button class="btn-icon" onclick="document.getElementById('${iid}').remove()" title="Remove">×</button>
+    `;
+    document.getElementById('food-item-rows').appendChild(div);
+  });
+  // Switch save button to update
+  const btn = document.querySelector('#page-food .btn-primary[onclick="saveMeal()"]');
+  if (btn) { btn.textContent = 'Update meal'; btn.setAttribute('onclick', `updateMeal(${id})`); }
+  // Scroll to form
+  document.querySelector('#page-food .card').scrollIntoView({ behavior: 'smooth' });
+  toast('Editing meal — make changes and save');
+}
+
+function updateMeal(id) {
+  const date = document.getElementById('food-date').value || today();
+  const mealType = document.getElementById('food-meal-type').value;
+  const mealName = document.getElementById('food-meal-name').value.trim() || mealType;
+  const notes = document.getElementById('food-notes').value.trim();
+  const items = [];
+  document.querySelectorAll('#food-item-rows > div').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    if (!name) return;
+    items.push({ name, cal: parseFloat(inputs[1].value) || 0, protein: parseFloat(inputs[2].value) || 0, carbs: parseFloat(inputs[3].value) || 0, fat: parseFloat(inputs[4].value) || 0 });
+  });
+  if (!items.length) { toast('Add at least one item'); return; }
+  const meals = getMeals().filter(m => m.id !== id);
+  meals.push({ id, date, mealType, mealName, notes, items });
+  saveMeals(meals);
+  toast('Meal updated ✓');
+  // Reset form
+  document.getElementById('food-meal-name').value = '';
+  document.getElementById('food-notes').value = '';
+  document.getElementById('food-item-rows').innerHTML = '';
+  foodItemCount = 0;
+  addFoodItem();
+  const btn = document.querySelector('#page-food .btn-primary');
+  if (btn) { btn.textContent = 'Save meal'; btn.setAttribute('onclick', 'saveMeal()'); }
+  renderFoodPage();
 }
 
 // ── Plan reference page ───────────────────────────────

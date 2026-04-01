@@ -463,20 +463,57 @@
     <!-- CHARTS -->
     <div id="page-charts" class="page">
       <div class="page-title">Charts</div>
-      <div class="page-sub">Visual progress over time</div>
-      <div class="grid-2" style="margin-bottom:16px;">
-        <div class="card">
-          <div class="card-title">Weight over time</div>
-          <div class="chart-wrap"><canvas id="chart-weight"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-title">Waist measurement</div>
-          <div class="chart-wrap"><canvas id="chart-waist"></canvas></div>
-        </div>
+
+      <!-- Time range selector -->
+      <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;" id="chart-range-btns">
+        <button class="btn btn-ghost btn-sm" onclick="setChartRange(30,this)">30 days</button>
+        <button class="btn btn-ghost btn-sm" onclick="setChartRange(90,this)">90 days</button>
+        <button class="btn btn-ghost btn-sm" onclick="setChartRange(180,this)">6 months</button>
+        <button class="btn btn-ghost btn-sm" onclick="setChartRange(0,this)">All time</button>
       </div>
+
+      <!-- Summary stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="chart-summary">
+        <div class="stat"><div class="stat-label">Total workouts</div><div><span class="stat-val" id="cs-workouts">—</span></div></div>
+        <div class="stat"><div class="stat-label">Total volume</div><div><span class="stat-val" id="cs-volume">—</span><span class="stat-unit">lbs</span></div></div>
+        <div class="stat"><div class="stat-label">Total miles</div><div><span class="stat-val" id="cs-miles">—</span><span class="stat-unit">mi</span></div></div>
+        <div class="stat"><div class="stat-label">Avg weight</div><div><span class="stat-val" id="cs-weight">—</span><span class="stat-unit">lbs</span></div></div>
+      </div>
+
+      <!-- Weight over time -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Body weight</div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="chart-weight"></canvas></div>
+      </div>
+
+      <!-- Volume over time -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Weekly volume (lbs lifted)</div>
+        <div class="chart-wrap" style="height:200px;"><canvas id="chart-volume"></canvas></div>
+      </div>
+
+      <!-- Miles run -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Weekly miles run</div>
+        <div class="chart-wrap" style="height:200px;"><canvas id="chart-miles"></canvas></div>
+      </div>
+
+      <!-- 1RM tracker -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0;">Estimated 1 rep max</div>
+          <select id="orm-exercise" onchange="renderCharts()" style="width:auto;font-size:12px;padding:4px 8px;">
+            <option value="">— select exercise —</option>
+          </select>
+        </div>
+        <div class="chart-wrap" style="height:200px;"><canvas id="chart-orm"></canvas></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:'DM Mono',monospace;">Brzycki formula: weight × (36 / (37 − reps))</div>
+      </div>
+
+      <!-- Activity calendar heatmap -->
       <div class="card">
-        <div class="card-title">Activity frequency</div>
-        <div class="chart-wrap"><canvas id="chart-activity"></canvas></div>
+        <div class="card-title">Activity heatmap</div>
+        <div id="chart-calendar" style="overflow-x:auto;padding-bottom:4px;"></div>
       </div>
     </div>
 
@@ -751,7 +788,12 @@ function nav(page) {
   event.currentTarget.classList.add('active');
   if (page === 'dashboard') refreshDashboard();
   if (page === 'history') renderHistory('all');
-  if (page === 'charts') renderCharts();
+  if (page === 'charts') {
+    // Highlight default range button
+    const btns = document.querySelectorAll('#chart-range-btns .btn');
+    if (btns.length) { btns[0].style.borderColor = 'var(--accent)'; btns[0].style.color = 'var(--accent)'; }
+    renderCharts();
+  }
   if (page === 'body-stats') renderStatsTable();
   if (page === 'log-workout') { initWorkoutForm(); resetTimers(); timerShow(); }
   else timerHide();
@@ -1659,78 +1701,243 @@ function updateWorkout(id) {
 
 // ── Charts ────────────────────────────────────────────
 let chartInstances = {};
-function renderCharts() {
-  const stats = getStats().sort((a,b) => a.date.localeCompare(b.date));
-  const workouts = getWorkouts();
-  const runs = getRuns();
+let chartRangeDays = 30;
 
-  const chartDefaults = {
+function setChartRange(days, el) {
+  chartRangeDays = days;
+  document.querySelectorAll('#chart-range-btns .btn').forEach(b => { b.style.borderColor = ''; b.style.color = ''; });
+  el.style.borderColor = 'var(--accent)'; el.style.color = 'var(--accent)';
+  renderCharts();
+}
+
+function chartDefaults() {
+  return {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1f2120', titleColor: '#8a9189', bodyColor: '#e8ebe8', borderColor: '#272927', borderWidth: 1 } },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a615a', font: { family: 'DM Mono', size: 10 } } },
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a615a', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 8 } },
       y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a615a', font: { family: 'DM Mono', size: 10 } } }
     }
   };
+}
 
-  // Weight chart
-  if (chartInstances.weight) chartInstances.weight.destroy();
+function filterByRange(items, dateKey) {
+  if (!chartRangeDays) return items;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - chartRangeDays);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  return items.filter(i => (i[dateKey] || '') >= cutoffStr);
+}
+
+function destroyChart(key) {
+  if (chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; }
+}
+
+function renderCharts() {
+  const allStats    = getStats().sort((a,b) => a.date.localeCompare(b.date));
+  const allWorkouts = getWorkouts();
+  const allRuns     = getRuns();
+
+  const stats    = filterByRange(allStats, 'date');
+  const workouts = filterByRange(allWorkouts, 'date');
+  const runs     = filterByRange(allRuns, 'date');
+
+  // ── Summary stats ──
+  const totalVol = workouts.reduce((sum, w) => {
+    (w.exercises||[]).forEach(ex => (ex.sets||[]).forEach(s => {
+      const w = parseFloat(s.weight) || 0;
+      const r = parseInt(s.reps) || 0;
+      sum += w * r;
+    }));
+    return sum;
+  }, 0);
+  const totalMiles = runs.reduce((s,r) => s + (parseFloat(r.distance)||0), 0);
+  const avgWeight = stats.length ? (stats.reduce((s,st) => s + (parseFloat(st.weight)||0), 0) / stats.filter(s=>s.weight).length) : 0;
+
+  document.getElementById('cs-workouts').textContent = workouts.length;
+  document.getElementById('cs-volume').textContent = totalVol > 1000 ? (totalVol/1000).toFixed(1) + 'k' : Math.round(totalVol);
+  document.getElementById('cs-miles').textContent = totalMiles.toFixed(1);
+  document.getElementById('cs-weight').textContent = avgWeight ? avgWeight.toFixed(1) : '—';
+
+  // ── Weight chart ──
+  destroyChart('weight');
   const wCtx = document.getElementById('chart-weight').getContext('2d');
   chartInstances.weight = new Chart(wCtx, {
     type: 'line',
     data: {
-      labels: stats.map(s => s.date),
-      datasets: [{
-        data: stats.map(s => parseFloat(s.weight) || null),
-        borderColor: '#b8f07a', backgroundColor: 'rgba(184,240,122,0.08)',
-        pointBackgroundColor: '#b8f07a', pointRadius: 3, tension: 0.3, fill: true
-      }, {
-        data: stats.map(() => 222),
-        borderColor: 'rgba(240,122,122,0.4)', borderDash: [4,4], pointRadius: 0, fill: false
-      }]
+      labels: stats.filter(s=>s.weight).map(s => s.date),
+      datasets: [
+        { data: stats.filter(s=>s.weight).map(s => parseFloat(s.weight)||null), borderColor: '#b8f07a', backgroundColor: 'rgba(184,240,122,0.06)', pointBackgroundColor: '#b8f07a', pointRadius: 3, tension: 0.3, fill: true },
+        { data: stats.filter(s=>s.weight).map(() => 222), borderColor: 'rgba(240,122,122,0.35)', borderDash: [4,4], pointRadius: 0, fill: false }
+      ]
     },
-    options: { ...chartDefaults }
+    options: { ...chartDefaults(), plugins: { ...chartDefaults().plugins, tooltip: { ...chartDefaults().plugins.tooltip, callbacks: { label: ctx => ctx.datasetIndex === 0 ? ctx.parsed.y + ' lbs' : 'Goal: 222 lbs' } } } }
   });
 
-  // Waist chart
-  if (chartInstances.waist) chartInstances.waist.destroy();
-  const waistCtx = document.getElementById('chart-waist').getContext('2d');
-  chartInstances.waist = new Chart(waistCtx, {
-    type: 'line',
-    data: {
-      labels: stats.filter(s=>s.waist).map(s => s.date),
-      datasets: [{
-        data: stats.filter(s=>s.waist).map(s => parseFloat(s.waist) || null),
-        borderColor: '#7ab8f0', backgroundColor: 'rgba(122,184,240,0.08)',
-        pointBackgroundColor: '#7ab8f0', pointRadius: 3, tension: 0.3, fill: true
-      }]
-    },
-    options: { ...chartDefaults }
+  // ── Weekly volume ──
+  const volByWeek = {};
+  workouts.forEach(w => {
+    const wk = weekStart(w.date);
+    if (!volByWeek[wk]) volByWeek[wk] = 0;
+    (w.exercises||[]).forEach(ex => (ex.sets||[]).forEach(s => {
+      volByWeek[wk] += (parseFloat(s.weight)||0) * (parseInt(s.reps)||0);
+    }));
   });
-
-  // Activity bar chart (last 8 weeks)
-  const weeks = {};
-  [...workouts, ...runs].forEach(a => {
-    const d = new Date(a.date);
-    const monday = new Date(d);
-    monday.setDate(d.getDate() - ((d.getDay()+6)%7));
-    const wk = monday.toISOString().split('T')[0];
-    weeks[wk] = (weeks[wk] || 0) + 1;
-  });
-  const wkKeys = Object.keys(weeks).sort().slice(-8);
-  if (chartInstances.activity) chartInstances.activity.destroy();
-  const actCtx = document.getElementById('chart-activity').getContext('2d');
-  chartInstances.activity = new Chart(actCtx, {
+  const volKeys = Object.keys(volByWeek).sort();
+  destroyChart('volume');
+  const volCtx = document.getElementById('chart-volume').getContext('2d');
+  chartInstances.volume = new Chart(volCtx, {
     type: 'bar',
-    data: {
-      labels: wkKeys.map(k => 'Wk ' + k.slice(5,10)),
-      datasets: [{
-        data: wkKeys.map(k => weeks[k]),
-        backgroundColor: 'rgba(184,240,122,0.25)', borderColor: '#b8f07a', borderWidth: 1, borderRadius: 4
-      }]
-    },
-    options: { ...chartDefaults }
+    data: { labels: volKeys.map(k => k.slice(5)), datasets: [{ data: volKeys.map(k => Math.round(volByWeek[k])), backgroundColor: 'rgba(127,119,221,0.3)', borderColor: '#7F77DD', borderWidth: 1, borderRadius: 3 }] },
+    options: { ...chartDefaults(), plugins: { ...chartDefaults().plugins, tooltip: { ...chartDefaults().plugins.tooltip, callbacks: { label: ctx => ctx.parsed.y.toLocaleString() + ' lbs' } } } }
   });
+
+  // ── Weekly miles ──
+  const milesByWeek = {};
+  runs.forEach(r => {
+    const wk = weekStart(r.date);
+    milesByWeek[wk] = (milesByWeek[wk] || 0) + (parseFloat(r.distance)||0);
+  });
+  const milesKeys = Object.keys(milesByWeek).sort();
+  destroyChart('miles');
+  const milesCtx = document.getElementById('chart-miles').getContext('2d');
+  chartInstances.miles = new Chart(milesCtx, {
+    type: 'bar',
+    data: { labels: milesKeys.map(k => k.slice(5)), datasets: [{ data: milesKeys.map(k => parseFloat(milesByWeek[k].toFixed(2))), backgroundColor: 'rgba(122,184,240,0.3)', borderColor: '#7ab8f0', borderWidth: 1, borderRadius: 3 }] },
+    options: { ...chartDefaults(), plugins: { ...chartDefaults().plugins, tooltip: { ...chartDefaults().plugins.tooltip, callbacks: { label: ctx => ctx.parsed.y + ' mi' } } } }
+  });
+
+  // ── 1RM — populate exercise selector ──
+  const exNames = new Set();
+  allWorkouts.forEach(w => (w.exercises||[]).forEach(ex => { if (ex.name) exNames.add(ex.name); }));
+  const sel = document.getElementById('orm-exercise');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">— select exercise —</option>' + [...exNames].sort().map(n => `<option value="${n}" ${n===currentVal?'selected':''}>${n}</option>`).join('');
+
+  destroyChart('orm');
+  const ormCtx = document.getElementById('chart-orm').getContext('2d');
+  if (sel.value) {
+    const ormData = [];
+    allWorkouts.filter(w => filterByRange([w],'date').length).forEach(w => {
+      (w.exercises||[]).filter(e => e.name === sel.value).forEach(ex => {
+        (ex.sets||[]).forEach(s => {
+          const wt = parseFloat(s.weight);
+          const rp = parseInt(s.reps);
+          if (wt > 0 && rp > 0 && rp < 37) {
+            const orm = wt * (36 / (37 - rp));
+            ormData.push({ date: w.date, orm: Math.round(orm) });
+          }
+        });
+      });
+    });
+    const ormByDate = {};
+    ormData.forEach(d => { ormByDate[d.date] = Math.max(ormByDate[d.date]||0, d.orm); });
+    const ormKeys = Object.keys(ormByDate).sort();
+    chartInstances.orm = new Chart(ormCtx, {
+      type: 'line',
+      data: { labels: ormKeys, datasets: [{ data: ormKeys.map(k => ormByDate[k]), borderColor: '#f0c87a', backgroundColor: 'rgba(240,200,122,0.06)', pointBackgroundColor: '#f0c87a', pointRadius: 4, tension: 0.3, fill: true }] },
+      options: { ...chartDefaults(), plugins: { ...chartDefaults().plugins, tooltip: { ...chartDefaults().plugins.tooltip, callbacks: { label: ctx => 'Est. 1RM: ' + ctx.parsed.y + ' lbs' } } } }
+    });
+  } else {
+    chartInstances.orm = new Chart(ormCtx, { type: 'line', data: { labels: [], datasets: [] }, options: chartDefaults() });
+    // Show placeholder
+    ormCtx.fillStyle = '#5a615a';
+    ormCtx.font = '13px DM Mono';
+    ormCtx.textAlign = 'center';
+    ormCtx.fillText('Select an exercise above', ormCtx.canvas.width/2, 100);
+  }
+
+  // ── Activity calendar heatmap ──
+  renderCalendar(allWorkouts, allRuns);
+}
+
+function weekStart(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+
+function renderCalendar(workouts, runs) {
+  const container = document.getElementById('chart-calendar');
+  if (!container) return;
+
+  // Build activity map
+  const actMap = {};
+  workouts.forEach(w => { actMap[w.date] = (actMap[w.date]||0) + 1; });
+  runs.forEach(r => { actMap[r.date] = (actMap[r.date]||0) + 1; });
+
+  // Last 26 weeks (6 months)
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 181);
+  // Align to Monday
+  while (startDate.getDay() !== 1) startDate.setDate(startDate.getDate() - 1);
+
+  const weeks = [];
+  let cur = new Date(startDate);
+  while (cur <= today) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      const ds = cur.toISOString().split('T')[0];
+      week.push({ date: ds, count: actMap[ds]||0, future: cur > today });
+      cur.setDate(cur.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+
+  const dayLabels = ['M','T','W','T','F','S','S'];
+  const cellSize = 14, gap = 3;
+
+  let html = `<div style="display:flex;gap:${gap}px;align-items:flex-start;">`;
+  // Day labels
+  html += `<div style="display:flex;flex-direction:column;gap:${gap}px;padding-top:18px;">`;
+  dayLabels.forEach(l => html += `<div style="width:10px;height:${cellSize}px;font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;line-height:${cellSize}px;text-align:right;">${l}</div>`);
+  html += `</div>`;
+
+  // Weeks
+  weeks.forEach(week => {
+    // Month label on top of first day of new month
+    const firstDay = week[0];
+    const monthLabel = firstDay.date.slice(5,7) === firstDay.date.slice(5,7) && new Date(firstDay.date).getDate() <= 7
+      ? new Date(firstDay.date).toLocaleDateString('en-US',{month:'short'})
+      : '';
+
+    html += `<div style="display:flex;flex-direction:column;gap:${gap}px;">`;
+    html += `<div style="height:14px;font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;">${new Date(firstDay.date).getDate() <= 7 ? new Date(firstDay.date).toLocaleDateString('en-US',{month:'short'}) : ''}</div>`;
+    week.forEach(day => {
+      const c = day.count;
+      const bg = day.future ? 'transparent' :
+        c === 0 ? 'var(--surface3)' :
+        c === 1 ? 'rgba(184,240,122,0.3)' :
+        c === 2 ? 'rgba(184,240,122,0.55)' :
+                  '#b8f07a';
+      html += `<div title="${day.date}${c ? ': '+c+' session'+(c>1?'s':'') : ''}" style="width:${cellSize}px;height:${cellSize}px;border-radius:3px;background:${bg};cursor:${c?'pointer':'default'};" ${c ? `onclick="showDayDetail('${day.date}')"` : ''}></div>`;
+    });
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+  // Legend
+  html += `<div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;">
+    <span>Less</span>
+    <div style="width:12px;height:12px;border-radius:2px;background:var(--surface3);"></div>
+    <div style="width:12px;height:12px;border-radius:2px;background:rgba(184,240,122,0.3);"></div>
+    <div style="width:12px;height:12px;border-radius:2px;background:rgba(184,240,122,0.55);"></div>
+    <div style="width:12px;height:12px;border-radius:2px;background:#b8f07a;"></div>
+    <span>More</span>
+  </div>`;
+  container.innerHTML = html;
+}
+
+function showDayDetail(date) {
+  const workouts = getWorkouts().filter(w => w.date === date);
+  const runs = getRuns().filter(r => r.date === date);
+  const parts = [];
+  workouts.forEach(w => parts.push(w.type + ' workout'));
+  runs.forEach(r => parts.push(r.distance + ' mi run'));
+  toast(date + ': ' + parts.join(', '));
 }
 
 // ── Food & Drink ──────────────────────────────────────

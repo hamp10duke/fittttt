@@ -251,6 +251,7 @@
       <div style="display:flex;flex-direction:column;gap:6px;">
         <button class="btn btn-ghost btn-sm" onclick="exportData()" style="width:100%;justify-content:center;">↓ Export data</button>
         <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">↑ Import data<input type="file" accept=".json" onchange="importData(event)" style="display:none;"></label>
+        <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">↑ Import Hevy CSV<input type="file" accept=".csv" onchange="importHevyCSV(event)" style="display:none;"></label>
       </div>
     </div>
   </nav>
@@ -2281,6 +2282,117 @@ function importData(event) {
     event.target.value = '';
   };
   reader.onerror = () => { toast('Could not read file'); event.target.value = ''; };
+  reader.readAsText(file);
+}
+
+// ── Hevy CSV import ───────────────────────────────────
+function importHevyCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      if (lines.length < 2) { toast('CSV appears empty'); return; }
+
+      // Parse CSV respecting quoted fields
+      function parseCSVLine(line) {
+        const fields = [];
+        let cur = '', inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') { inQuote = !inQuote; }
+          else if (ch === ',' && !inQuote) { fields.push(cur.trim()); cur = ''; }
+          else { cur += ch; }
+        }
+        fields.push(cur.trim());
+        return fields;
+      }
+
+      const headers = parseCSVLine(lines[0]);
+      const idx = {};
+      headers.forEach((h, i) => idx[h.replace(/"/g,'')] = i);
+
+      // Group rows by workout (title + start_time)
+      const workoutMap = new Map();
+      for (let i = 1; i < lines.length; i++) {
+        const f = parseCSVLine(lines[i]);
+        if (f.length < 5) continue;
+        const title     = f[idx['title']] || '';
+        const startRaw  = f[idx['start_time']] || '';
+        const endRaw    = f[idx['end_time']] || '';
+        const exName    = f[idx['exercise_title']] || '';
+        const setIndex  = parseInt(f[idx['set_index']]) || 0;
+        const setType   = f[idx['set_type']] || 'normal';
+        const weightLbs = f[idx['weight_lbs']] || '';
+        const reps      = f[idx['reps']] || '';
+        const durSecs   = f[idx['duration_seconds']] || '';
+
+        if (!title || !startRaw || !exName) continue;
+        const key = title + '||' + startRaw;
+
+        if (!workoutMap.has(key)) {
+          // Parse date from "20 Mar 2026, 19:01"
+          const datePart = startRaw.split(',')[0].trim();
+          const [day, mon, year] = datePart.split(' ');
+          const months = { Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12' };
+          const date = `${year}-${months[mon] || '01'}-${day.padStart(2,'0')}`;
+
+          // Parse duration from start/end times
+          let durationMin = null;
+          try {
+            const parseTime = s => { const [d,t] = s.split(', '); const [h,m] = t.trim().split(':'); const [dd,mm,yyyy] = d.trim().split(' '); const mo = months[mm]||'01'; return new Date(`${yyyy}-${mo}-${dd.padStart(2,'0')}T${h.padStart(2,'0')}:${m}:00`); };
+            const start = parseTime(startRaw);
+            const end = parseTime(endRaw);
+            durationMin = Math.round((end - start) / 60000);
+          } catch {}
+
+          // Guess type from title
+          const titleLower = title.toLowerCase();
+          let type = 'custom';
+          if (titleLower.includes('push') || titleLower.includes('chest') || titleLower.includes('upper')) type = 'push';
+          else if (titleLower.includes('pull') || titleLower.includes('back') || titleLower.includes('bis')) type = 'pull';
+          else if (titleLower.includes('leg') || titleLower.includes('lower')) type = 'legs';
+
+          workoutMap.set(key, { id: Date.now() + Math.random(), date, type, notes: title + (durationMin ? ` · ${durationMin} min` : ''), exercises: new Map() });
+        }
+
+        const workout = workoutMap.get(key);
+        if (!workout.exercises.has(exName)) workout.exercises.set(exName, []);
+
+        const set = { logged: true };
+        if (weightLbs) set.weight = weightLbs;
+        if (reps) set.reps = reps;
+        else if (durSecs) set.reps = durSecs + 's';
+        if (setType === 'warmup') set.type = 'warmup';
+        workout.exercises.get(exName).push(set);
+      }
+
+      // Convert Map to array format
+      const existing = getWorkouts();
+      const existingKeys = new Set(existing.map(w => w.date + '||' + w.notes?.split(' ·')[0]));
+      let added = 0;
+
+      workoutMap.forEach(workout => {
+        const key = workout.date + '||' + workout.notes?.split(' ·')[0];
+        if (existingKeys.has(key)) return; // skip duplicates
+        const exercises = [];
+        workout.exercises.forEach((sets, name) => exercises.push({ name, sets }));
+        existing.push({ id: workout.id, date: workout.date, type: workout.type, notes: workout.notes, exercises });
+        added++;
+      });
+
+      if (added === 0) { toast('All workouts already imported'); return; }
+      saveWorkouts(existing);
+      refreshDashboard();
+      renderHistory('all');
+      toast(`Imported ${added} workout${added !== 1 ? 's' : ''} from Hevy ✓`);
+    } catch(err) {
+      console.error(err);
+      toast('Import failed — check file format');
+    }
+    event.target.value = '';
+  };
   reader.readAsText(file);
 }
 

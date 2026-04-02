@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fitness Tracker</title>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @font-face {
@@ -318,6 +319,7 @@
         <button class="btn btn-ghost btn-sm" onclick="exportData()" style="width:100%;justify-content:center;">↓ Export data</button>
         <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">↑ Import data<input type="file" accept=".json" onchange="importData(event)" style="display:none;"></label>
         <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">↑ Import Hevy CSV<input type="file" accept=".csv" onchange="importHevyCSV(event)" style="display:none;"></label>
+        <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">↑ Import Nike TCX<input type="file" accept=".tcx,.zip" onchange="importNikeTCX(event)" style="display:none;"></label>
       </div>
     </div>
   </nav>
@@ -2769,6 +2771,104 @@ function importHevyCSV(event) {
     event.target.value = '';
   };
   reader.readAsText(file);
+}
+
+// ── Nike TCX import ───────────────────────────────────
+async function importNikeTCX(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  toast('Reading Nike data...');
+
+  try {
+    let tcxFiles = [];
+
+    if (file.name.endsWith('.zip')) {
+      const zip = await JSZip.loadAsync(file);
+      const promises = [];
+      zip.forEach((path, entry) => {
+        if (path.endsWith('.tcx') && !path.includes('__MACOSX')) {
+          promises.push(entry.async('text').then(text => ({ name: path, text })));
+        }
+      });
+      tcxFiles = await Promise.all(promises);
+    } else {
+      const text = await file.text();
+      tcxFiles = [{ name: file.name, text }];
+    }
+
+    if (!tcxFiles.length) { toast('No TCX files found in ZIP'); return; }
+
+    const parser = new DOMParser();
+    const parsed = [];
+
+    tcxFiles.forEach(({ name, text }) => {
+      try {
+        const doc = parser.parseFromString(text, 'application/xml');
+        const activity = doc.querySelector('Activity');
+        if (!activity) return;
+
+        const sport = activity.getAttribute('Sport') || 'Running';
+        const idEl = activity.querySelector('Id');
+        if (!idEl) return;
+        const dateStr = idEl.textContent.trim().slice(0, 10);
+
+        const lap = activity.querySelector('Lap');
+        if (!lap) return;
+
+        const secsEl = lap.querySelector('TotalTimeSeconds');
+        const distEl = lap.querySelector('DistanceMeters');
+        if (!secsEl || !distEl) return;
+
+        const secs = parseFloat(secsEl.textContent.trim());
+        const distM = parseFloat(distEl.textContent.trim());
+        if (!secs || isNaN(secs)) return;
+
+        const distMi = distM / 1609.344;
+        const durMin = Math.round(secs / 60 * 10) / 10;
+
+        let paceStr = '—';
+        if (distMi > 0.1) {
+          const paceSec = secs / distMi;
+          paceStr = `${Math.floor(paceSec / 60)}:${String(Math.round(paceSec % 60)).padStart(2, '0')}`;
+        }
+
+        // Map sport type
+        const sportLower = sport.toLowerCase();
+        const type = sportLower.includes('run') ? 'run' :
+                     sportLower.includes('walk') ? 'walk' : 'easy';
+
+        parsed.push({
+          id: Date.now() + Math.random(),
+          date: dateStr,
+          type,
+          distance: distMi > 0.01 ? distMi.toFixed(2) : '0',
+          duration: durMin,
+          pace: paceStr,
+          notes: `Nike Run Club · ${sport}`,
+          nike: true
+        });
+      } catch(e) {}
+    });
+
+    if (!parsed.length) { toast('No valid activities found'); return; }
+
+    // Deduplicate against existing runs by date + duration
+    const existing = getRuns();
+    const existingKeys = new Set(existing.map(r => `${r.date}|${r.duration}`));
+    const toAdd = parsed.filter(r => !existingKeys.has(`${r.date}|${r.duration}`));
+
+    if (!toAdd.length) { toast('All Nike runs already imported'); return; }
+
+    saveRuns([...existing, ...toAdd]);
+    refreshDashboard();
+    refreshHome();
+    renderHistory('all');
+    toast(`Imported ${toAdd.length} run${toAdd.length !== 1 ? 's' : ''} from Nike ✓`);
+  } catch(err) {
+    console.error(err);
+    toast('Import failed — try uploading the tcx.zip directly');
+  }
+  event.target.value = '';
 }
 
 // ── Init ──────────────────────────────────────────────

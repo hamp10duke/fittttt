@@ -305,6 +305,10 @@
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/><path d="M8 2v1M8 13v1M2 8h1M13 8h1"/></svg>
       Programs
     </div>
+    <div class="nav-item" onclick="nav('hiit')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v4l3 2"/><circle cx="8" cy="9" r="6"/><path d="M6 1h4"/></svg>
+      HIIT Timer
+    </div>
     <div class="nav-section">Review</div>
     <div class="nav-item" onclick="nav('history')">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
@@ -680,6 +684,63 @@
       </div>
     </div>
 
+    <!-- HIIT TIMER -->
+    <div id="page-hiit" class="page">
+      <div class="page-title">HIIT Timer</div>
+      <div class="page-sub">Interval training</div>
+
+      <!-- Config -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;">
+          <div>
+            <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Rounds</div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <button class="rep-btn" onclick="hiitStep('rounds',-1)">−</button>
+              <span id="hiit-rounds" style="font-family:'DM Mono',monospace;font-size:28px;min-width:40px;text-align:center;color:var(--text);">8</span>
+              <button class="rep-btn" onclick="hiitStep('rounds',1)">+</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Work (sec)</div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <button class="rep-btn" onclick="hiitStep('work',-5)">−</button>
+              <span id="hiit-work" style="font-family:'DM Mono',monospace;font-size:28px;min-width:40px;text-align:center;color:var(--accent);">40</span>
+              <button class="rep-btn" onclick="hiitStep('work',5)">+</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Rest (sec)</div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <button class="rep-btn" onclick="hiitStep('rest',-5)">−</button>
+              <span id="hiit-rest" style="font-family:'DM Mono',monospace;font-size:28px;min-width:40px;text-align:center;color:var(--blue);">20</span>
+              <button class="rep-btn" onclick="hiitStep('rest',5)">+</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;align-items:baseline;gap:12px;">
+          <span style="font-family:'DM Mono',monospace;font-size:20px;color:var(--text);" id="hiit-total-time">—</span>
+          <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;" id="hiit-total-breakdown"></span>
+        </div>
+      </div>
+
+      <!-- Timer display -->
+      <div class="card" style="text-align:center;padding:40px 32px;">
+        <div id="hiit-phase" style="font-size:11px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);margin-bottom:20px;">Ready</div>
+        <div id="hiit-countdown" style="font-family:'DM Mono',monospace;font-size:120px;font-weight:400;line-height:1;color:var(--text);margin-bottom:12px;transition:color 0.3s;">—</div>
+        <div style="font-size:13px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:28px;min-height:20px;" id="hiit-round-label"></div>
+        <div style="background:var(--surface3);border-radius:4px;height:6px;margin-bottom:28px;overflow:hidden;max-width:500px;margin-left:auto;margin-right:auto;">
+          <div id="hiit-progress" style="height:100%;border-radius:4px;background:var(--accent);width:0%;transition:width 0.9s linear;"></div>
+        </div>
+        <div id="hiit-dots" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:32px;"></div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button id="hiit-btn-start" class="btn btn-primary" onclick="hiitStart()" style="padding:12px 40px;font-size:15px;">▶ Start</button>
+          <button id="hiit-btn-pause" class="btn btn-ghost" onclick="hiitPause()" style="padding:12px 28px;font-size:15px;display:none;">⏸ Pause</button>
+          <button id="hiit-btn-resume" class="btn btn-ghost" onclick="hiitResume()" style="padding:12px 28px;font-size:15px;display:none;">▶ Resume</button>
+          <button id="hiit-btn-reset" class="btn btn-ghost" onclick="hiitReset()" style="padding:12px 28px;font-size:15px;display:none;">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+
     <!-- DATA -->
     <div id="page-data" class="page">
       <div class="page-title">Data &amp; imports</div>
@@ -997,6 +1058,7 @@ function navTo(page) {
   if (page === 'body-stats') renderStatsTable();
   if (page === 'log-workout') { initWorkoutForm(); resetTimers(); timerShow(); }
   else timerHide();
+  if (page === 'hiit') initHiitPage();
   if (page === 'routes') initRoutesPage();
   if (page === 'programs') renderProgramsPage();
   if (page === 'data') renderDataPage();
@@ -2936,6 +2998,216 @@ function selectRoute(date, duration, stravaId, isNike) {
   }
 
   routeMap.fitBounds(routePolyline.getBounds(), { padding: [40, 40] });
+}
+
+// ── HIIT Timer ────────────────────────────────────────
+const hiitState = {
+  rounds: 8, work: 40, rest: 20,
+  currentRound: 0, phase: 'idle', remaining: 0,
+  interval: null, running: false
+};
+
+function hiitStep(field, delta) {
+  const mins = { rounds: 1, work: 5, rest: 5 };
+  const maxs = { rounds: 30, work: 300, rest: 300 };
+  hiitState[field] = Math.max(mins[field], Math.min(maxs[field], hiitState[field] + delta));
+  document.getElementById('hiit-' + field).textContent = hiitState[field];
+  hiitUpdateTotals();
+}
+
+function hiitUpdateTotals() {
+  const { rounds, work, rest } = hiitState;
+  const total = rounds * work + (rounds - 1) * rest;
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  document.getElementById('hiit-total-time').textContent =
+    mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  document.getElementById('hiit-total-breakdown').textContent =
+    `${rounds} × ${work}s work + ${rest}s rest`;
+  hiitRenderDots();
+}
+
+function hiitRenderDots() {
+  const { rounds, currentRound, phase, running } = hiitState;
+  const dots = document.getElementById('hiit-dots');
+  if (!dots) return;
+  dots.innerHTML = Array.from({ length: rounds }, (_, i) => {
+    let bg = 'var(--surface3)';
+    if (i < currentRound) bg = 'var(--accent)';
+    else if (i === currentRound && running) bg = phase === 'work' ? 'var(--accent)' : 'var(--blue)';
+    return `<div style="width:10px;height:10px;border-radius:50%;background:${bg};transition:background 0.3s;"></div>`;
+  }).join('');
+}
+
+function hiitSpeak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.rate = 1.1;
+  utt.pitch = 1;
+  utt.volume = 1;
+  window.speechSynthesis.speak(utt);
+}
+
+function hiitBeep(type) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = type === 'work' ? 880 : type === 'rest' ? 440 : 660;
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  } catch(e) {}
+}
+
+function hiitSetPhaseUI(phase, remaining, total, round, rounds) {
+  const countdown = document.getElementById('hiit-countdown');
+  const phaseEl = document.getElementById('hiit-phase');
+  const progress = document.getElementById('hiit-progress');
+  const roundLabel = document.getElementById('hiit-round-label');
+
+  countdown.textContent = remaining;
+
+  if (phase === 'work') {
+    phaseEl.textContent = 'Work';
+    countdown.style.color = 'var(--accent)';
+    progress.style.background = 'var(--accent)';
+    roundLabel.textContent = `Round ${round} of ${rounds}`;
+  } else if (phase === 'rest') {
+    phaseEl.textContent = 'Rest';
+    countdown.style.color = 'var(--blue)';
+    progress.style.background = 'var(--blue)';
+    roundLabel.textContent = `Round ${round} of ${rounds} · Next: work`;
+  } else if (phase === 'done') {
+    phaseEl.textContent = 'Done!';
+    countdown.textContent = '✓';
+    countdown.style.color = 'var(--accent)';
+    progress.style.background = 'var(--accent)';
+    progress.style.width = '100%';
+    roundLabel.textContent = `${rounds} rounds complete`;
+    return;
+  }
+
+  progress.style.width = (((total - remaining) / total) * 100) + '%';
+  hiitRenderDots();
+}
+
+function hiitStart() {
+  hiitState.running = true;
+  hiitState.currentRound = 1;
+  hiitState.phase = 'work';
+  hiitState.remaining = hiitState.work;
+
+  document.getElementById('hiit-btn-start').style.display = 'none';
+  document.getElementById('hiit-btn-pause').style.display = '';
+  document.getElementById('hiit-btn-reset').style.display = '';
+
+  hiitSpeak('Go');
+  hiitBeep('work');
+  hiitSetPhaseUI('work', hiitState.remaining, hiitState.work, 1, hiitState.rounds);
+  hiitTick();
+}
+
+function hiitTick() {
+  hiitState.interval = setInterval(() => {
+    hiitState.remaining--;
+
+    // Voice countdown at 3, 2, 1
+    if (hiitState.remaining <= 3 && hiitState.remaining > 0) {
+      hiitSpeak(String(hiitState.remaining));
+    }
+
+    if (hiitState.remaining <= 0) {
+      clearInterval(hiitState.interval);
+      hiitNextPhase();
+      return;
+    }
+
+    hiitSetPhaseUI(
+      hiitState.phase,
+      hiitState.remaining,
+      hiitState.phase === 'work' ? hiitState.work : hiitState.rest,
+      hiitState.currentRound,
+      hiitState.rounds
+    );
+  }, 1000);
+}
+
+function hiitNextPhase() {
+  const { rounds, work, rest } = hiitState;
+
+  if (hiitState.phase === 'work') {
+    if (hiitState.currentRound >= rounds) {
+      hiitState.phase = 'done';
+      hiitState.running = false;
+      clearInterval(hiitState.interval);
+      hiitSpeak('Workout complete. Great job.');
+      hiitBeep('done');
+      hiitSetPhaseUI('done', 0, 0, rounds, rounds);
+      document.getElementById('hiit-btn-pause').style.display = 'none';
+      document.getElementById('hiit-btn-resume').style.display = 'none';
+    } else {
+      hiitState.phase = 'rest';
+      hiitState.remaining = rest;
+      hiitSpeak('Rest');
+      hiitBeep('rest');
+      hiitSetPhaseUI('rest', rest, rest, hiitState.currentRound, rounds);
+      hiitTick();
+    }
+
+  } else if (hiitState.phase === 'rest') {
+    hiitState.phase = 'work';
+    hiitState.currentRound++;
+    hiitState.remaining = work;
+    hiitSpeak('Go');
+    hiitBeep('work');
+    hiitSetPhaseUI('work', work, work, hiitState.currentRound, rounds);
+    hiitTick();
+  }
+}
+
+function hiitPause() {
+  clearInterval(hiitState.interval);
+  hiitState.running = false;
+  window.speechSynthesis?.cancel();
+  document.getElementById('hiit-btn-pause').style.display = 'none';
+  document.getElementById('hiit-btn-resume').style.display = '';
+}
+
+function hiitResume() {
+  hiitState.running = true;
+  document.getElementById('hiit-btn-resume').style.display = 'none';
+  document.getElementById('hiit-btn-pause').style.display = '';
+  hiitTick();
+}
+
+function hiitReset() {
+  clearInterval(hiitState.interval);
+  window.speechSynthesis?.cancel();
+  hiitState.running = false;
+  hiitState.phase = 'idle';
+  hiitState.currentRound = 0;
+  hiitState.remaining = 0;
+
+  document.getElementById('hiit-btn-start').style.display = '';
+  document.getElementById('hiit-btn-pause').style.display = 'none';
+  document.getElementById('hiit-btn-resume').style.display = 'none';
+  document.getElementById('hiit-btn-reset').style.display = 'none';
+  document.getElementById('hiit-countdown').textContent = '—';
+  document.getElementById('hiit-countdown').style.color = 'var(--text)';
+  document.getElementById('hiit-phase').textContent = 'Ready';
+  document.getElementById('hiit-round-label').textContent = '';
+  document.getElementById('hiit-progress').style.width = '0%';
+  hiitRenderDots();
+}
+
+function initHiitPage() {
+  hiitReset();
+  hiitUpdateTotals();
 }
 
 // ── Data page ─────────────────────────────────────────

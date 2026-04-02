@@ -185,7 +185,7 @@
   .set-timer.done { color: var(--accent2); }
 
   /* Routes full bleed */
-  #page-routes { margin: -32px; width: calc(100% + 64px); max-width: none; }
+  #page-routes { margin: -32px; width: calc(100vw - 220px); max-width: none; position: relative; left: 0; }
 
   /* Divider */
   .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
@@ -3033,28 +3033,39 @@ async function importNikeTCX(event) {
 
     if (!parsed.length) { toast('No valid activities found'); return; }
 
-    // Deduplicate against existing runs by date + duration
+    // Always extract GPS routes — even for runs already imported
+    const routes = getRoutes();
+    let routesAdded = 0;
+    parsed.forEach(r => {
+      if (r._coords && r._coords.length > 2) {
+        const key = `nike_${r.date}_${r.duration}`;
+        if (!routes[key] || routes[key].length < r._coords.length) {
+          routes[key] = r._coords;
+          routesAdded++;
+        }
+      }
+      delete r._coords;
+    });
+    if (routesAdded > 0) saveRoutes(routes);
+
+    // Deduplicate runs
     const existing = getRuns();
     const existingKeys = new Set(existing.map(r => `${r.date}|${r.duration}`));
     const toAdd = parsed.filter(r => !existingKeys.has(`${r.date}|${r.duration}`));
 
-    if (!toAdd.length) { toast('All Nike runs already imported'); return; }
+    if (toAdd.length > 0) {
+      saveRuns([...existing, ...toAdd]);
+    }
 
-    // Store GPS routes separately
-    const routes = getRoutes();
-    toAdd.forEach(r => {
-      if (r._coords && r._coords.length > 2) {
-        routes[`nike_${r.date}_${r.duration}`] = r._coords;
-      }
-      delete r._coords;
-    });
-    saveRoutes(routes);
-
-    saveRuns([...existing, ...toAdd]);
     refreshDashboard();
     refreshHome();
     renderHistory('all');
-    toast(`Imported ${toAdd.length} run${toAdd.length !== 1 ? 's' : ''} from Nike ✓`);
+    if (document.getElementById('page-routes').classList.contains('active')) renderRoutesList();
+
+    const msg = toAdd.length > 0
+      ? `Imported ${toAdd.length} run${toAdd.length !== 1 ? 's' : ''} + ${routesAdded} GPS routes from Nike ✓`
+      : `Updated ${routesAdded} GPS route${routesAdded !== 1 ? 's' : ''} from Nike ✓`;
+    toast(msg);
   } catch(err) {
     console.error(err);
     toast('Import failed — try uploading the tcx.zip directly');

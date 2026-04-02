@@ -260,9 +260,9 @@
     .sidebar-mobile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px; }
     .sidebar-mobile-grid .nav-item { padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid transparent; }
     .sidebar-mobile-grid .nav-section { display: none; }
-    .sidebar-footer { padding: 12px 0 0; border-top: 1px solid var(--border); width: 100%; }
-    .sidebar-footer-row { display: flex; align-items: center; gap: 8px; }
-    .sidebar-footer .goal-chip { flex: 1; margin-bottom: 0 !important; }
+    .sidebar-footer { padding: 12px 0 0; border-top: 1px solid var(--border); width: 100%; grid-column: 1 / -1; }
+    .sidebar-footer-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+    .sidebar-footer-row .goal-chip { flex: 1; min-width: 0; margin-bottom: 0 !important; }
     .sidebar-footer .goal-label { margin-bottom: 4px !important; }
     .nav-section { padding: 10px 0 4px; font-size: 10px; }
     .hamburger-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 20px; padding: 4px; }
@@ -368,9 +368,10 @@
       <div class="goal-label">Goal weight</div>
       <div class="sidebar-footer-row">
         <div class="goal-chip">220–225 lbs</div>
-        <button class="btn btn-ghost btn-sm" onclick="nav('data')" style="white-space:nowrap;">Data &amp; imports</button>
+        <button class="btn btn-ghost btn-sm" onclick="nav('data')" style="white-space:nowrap;flex-shrink:0;">Data &amp; imports</button>
       </div>
     </div>
+    </div><!-- end sidebar-mobile-grid -->
     </div><!-- end sidebar-body -->
   </nav>
 

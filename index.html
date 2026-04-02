@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fitness Tracker</title>
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -298,6 +300,10 @@
     <div class="nav-item" onclick="nav('history')">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
       History
+    </div>
+    <div class="nav-item" onclick="nav('routes')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12 C4 8 6 4 8 6 C10 8 12 4 14 2"/><circle cx="2" cy="12" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg>
+      Routes
     </div>
     <div class="nav-item" onclick="nav('charts')">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 3 5-6"/></svg>
@@ -641,6 +647,38 @@
       </div>
     </div>
 
+    </div>
+
+    <!-- ROUTES -->
+    <div id="page-routes" class="page">
+      <div class="page-title">Routes</div>
+      <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;height:calc(100vh - 140px);">
+        <!-- Run list -->
+        <div style="display:flex;flex-direction:column;gap:0;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
+          <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="filterRoutes('all',this)" style="border-color:var(--accent);color:var(--accent);">All</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterRoutes('nike',this)">Nike</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterRoutes('strava',this)">Strava</button>
+          </div>
+          <div id="routes-list" style="overflow-y:auto;flex:1;"></div>
+        </div>
+        <!-- Map -->
+        <div style="position:relative;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);">
+          <div id="route-map" style="width:100%;height:100%;"></div>
+          <div id="route-map-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface2);flex-direction:column;gap:8px;">
+            <div style="font-size:32px;opacity:0.3;">◎</div>
+            <div style="font-size:13px;color:var(--text3);">Select a run to view its route</div>
+          </div>
+          <!-- Route info overlay -->
+          <div id="route-info" style="display:none;position:absolute;top:12px;left:12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;min-width:160px;">
+            <div id="ri-date" style="font-family:'DM Mono',monospace;color:var(--text3);font-size:10px;margin-bottom:4px;"></div>
+            <div id="ri-dist" style="font-size:18px;font-weight:500;color:var(--text);font-family:'DM Mono',monospace;"></div>
+            <div id="ri-detail" style="color:var(--text2);margin-top:2px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- FOOD & DRINK -->
     <div id="page-food" class="page">
       <div class="page-title">Food & drink</div>
@@ -896,7 +934,7 @@ function saveMeals(v)    { cacheSet('meals', v);    sbWrite('meals', v); }
 async function syncFromSupabase() {
   const syncIndicator = document.getElementById('sync-indicator');
   if (syncIndicator) { syncIndicator.textContent = 'Syncing...'; syncIndicator.style.color = 'var(--text3)'; }
-  const keys = ['workouts', 'runs', 'bodystats', 'meals'];
+  const keys = ['workouts', 'runs', 'bodystats', 'meals', 'routes'];
   await Promise.all(keys.map(k => sbRead(k)));
   refreshHome();
   refreshDashboard();
@@ -922,7 +960,7 @@ function navTo(page) {
   if (page === 'body-stats') renderStatsTable();
   if (page === 'log-workout') { initWorkoutForm(); resetTimers(); timerShow(); }
   else timerHide();
-  if (page === 'plan') renderPlanPage();
+  if (page === 'routes') initRoutesPage();
   if (page === 'food') initFoodPage();
   if (page === 'home') refreshHome();
 }
@@ -2324,6 +2362,126 @@ function updateMeal(id) {
   renderFoodPage();
 }
 
+// ── Routes ────────────────────────────────────────────
+const getRoutes = () => cacheGet('routes') || {};
+const saveRoutes = v => { cacheSet('routes', v); sbWrite('routes', v); };
+
+let routeMap = null;
+let routePolyline = null;
+let routeFilter = 'all';
+
+function initRoutesPage() {
+  renderRoutesList();
+  // Init map if not already
+  if (!routeMap) {
+    setTimeout(() => {
+      const mapEl = document.getElementById('route-map');
+      if (!mapEl || routeMap) return;
+      routeMap = L.map('route-map', { zoomControl: true }).setView([33.5, -117.7], 11);
+      L.tileLayer('https://{s}.basemap.here.com/maptile/2.1/maptile/newest/reduced.day/{z}/{x}/{y}/256/png8?app_id=demo&app_code=demo', {
+        attribution: '© HERE'
+      });
+      // Use OSM tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+      }).addTo(routeMap);
+    }, 100);
+  }
+}
+
+function filterRoutes(f, el) {
+  routeFilter = f;
+  document.querySelectorAll('#page-routes .btn').forEach(b => { b.style.borderColor = ''; b.style.color = ''; });
+  el.style.borderColor = 'var(--accent)'; el.style.color = 'var(--accent)';
+  renderRoutesList();
+}
+
+function renderRoutesList() {
+  const runs = getRuns().sort((a,b) => b.date.localeCompare(a.date));
+  const routes = getRoutes();
+  const container = document.getElementById('routes-list');
+  if (!container) return;
+
+  let filtered = runs;
+  if (routeFilter === 'nike') filtered = runs.filter(r => r.nike);
+  if (routeFilter === 'strava') filtered = runs.filter(r => r.strava_id);
+
+  // Only show runs that have route data
+  const withRoutes = filtered.filter(r => {
+    const key = r.nike ? 'nike_' + r.date + '_' + r.duration : r.strava_id ? 'strava_' + r.strava_id : null;
+    return key && routes[key];
+  });
+  const withoutRoutes = filtered.filter(r => {
+    const key = r.nike ? 'nike_' + r.date + '_' + r.duration : r.strava_id ? 'strava_' + r.strava_id : null;
+    return !key || !routes[key];
+  });
+  const allFiltered = [...withRoutes, ...withoutRoutes];
+
+  if (!allFiltered.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">◎</div><div class="empty-text">No runs found</div></div>`;
+    return;
+  }
+
+  container.innerHTML = allFiltered.map(r => {
+    const key = r.nike ? 'nike_' + r.date + '_' + r.duration : r.strava_id ? 'strava_' + r.strava_id : null;
+    const hasRoute = key && routes[key];
+    const src = r.nike ? '🏃 Nike' : r.strava_id ? '⚡ Strava' : 'Manual';
+    return `<div onclick="selectRoute('${r.date}','${r.duration}','${r.strava_id||''}',${r.nike||false})"
+      style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"
+    >
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
+        <span style="font-size:13px;font-weight:500;color:var(--text);">${r.date}</span>
+        <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${r.distance||'?'} mi</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;color:var(--text3);">${src}</span>
+        <span style="font-size:11px;color:var(--text3);">· ${r.duration||'?'} min · ${r.pace||'?'}/mi</span>
+        ${hasRoute ? '<span style="font-size:10px;color:var(--accent);margin-left:auto;">📍 GPS</span>' : '<span style="font-size:10px;color:var(--text3);margin-left:auto;">no GPS</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectRoute(date, duration, stravaId, isNike) {
+  const routes = getRoutes();
+  const key = isNike ? `nike_${date}_${duration}` : stravaId ? `strava_${stravaId}` : null;
+  const coords = key ? routes[key] : null;
+
+  // Find the run for info
+  const run = getRuns().find(r => r.date === date && String(r.duration) === String(duration));
+
+  // Update info panel
+  document.getElementById('route-info').style.display = 'block';
+  document.getElementById('ri-date').textContent = date + (isNike ? ' · Nike Run Club' : stravaId ? ' · Strava' : '');
+  document.getElementById('ri-dist').textContent = (run?.distance || '?') + ' mi';
+  document.getElementById('ri-detail').textContent = (run?.duration || '?') + ' min · ' + (run?.pace || '?') + ' /mi';
+
+  if (!coords || !coords.length) {
+    document.getElementById('route-map-empty').style.display = 'flex';
+    document.getElementById('route-map-empty').querySelector('div:last-child').textContent = 'No GPS data for this run';
+    return;
+  }
+
+  document.getElementById('route-map-empty').style.display = 'none';
+
+  if (routePolyline) routeMap.removeLayer(routePolyline);
+  routePolyline = L.polyline(coords, {
+    color: '#b8f07a',
+    weight: 3,
+    opacity: 0.85
+  }).addTo(routeMap);
+
+  // Add start/end markers
+  if (coords.length > 1) {
+    L.circleMarker(coords[0], { radius: 6, fillColor: '#7ab8f0', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(routeMap);
+    L.circleMarker(coords[coords.length-1], { radius: 6, fillColor: '#f07a7a', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(routeMap);
+  }
+
+  routeMap.fitBounds(routePolyline.getBounds(), { padding: [30, 30] });
+}
+
 // ── Plan reference page ───────────────────────────────
 function renderPlanPage() {
   ['push','pull','legs','travel_push','travel_pull','travel_legs'].forEach(type => {
@@ -2582,6 +2740,7 @@ function exportData() {
     runs: getRuns(),
     bodystats: getStats(),
     meals: getMeals(),
+    routes: getRoutes(),
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -2622,6 +2781,7 @@ function importData(event) {
     if (r) saveRuns(data.runs);
     if (b) saveBodyStats(data.bodystats);
     if (m) saveMeals(data.meals);
+    if (data.routes) saveRoutes(data.routes);
 
     // Re-render all pages
     refreshDashboard();
@@ -2837,6 +2997,22 @@ async function importNikeTCX(event) {
         const type = sportLower.includes('run') ? 'run' :
                      sportLower.includes('walk') ? 'walk' : 'easy';
 
+        // Extract GPS track — every 5th trackpoint with a position
+        const trackpoints = doc.querySelectorAll('Trackpoint');
+        const coords = [];
+        let i = 0;
+        trackpoints.forEach(tp => {
+          i++;
+          if (i % 5 !== 0) return;
+          const lat = tp.querySelector('LatitudeDegrees');
+          const lon = tp.querySelector('LongitudeDegrees');
+          if (lat && lon) {
+            const la = parseFloat(lat.textContent);
+            const lo = parseFloat(lon.textContent);
+            if (!isNaN(la) && !isNaN(lo)) coords.push([la, lo]);
+          }
+        });
+
         parsed.push({
           id: Date.now() + Math.random(),
           date: dateStr,
@@ -2845,7 +3021,8 @@ async function importNikeTCX(event) {
           duration: durMin,
           pace: paceStr,
           notes: `Nike Run Club · ${sport}`,
-          nike: true
+          nike: true,
+          _coords: coords // temp, stored separately
         });
       } catch(e) {}
     });
@@ -2858,6 +3035,16 @@ async function importNikeTCX(event) {
     const toAdd = parsed.filter(r => !existingKeys.has(`${r.date}|${r.duration}`));
 
     if (!toAdd.length) { toast('All Nike runs already imported'); return; }
+
+    // Store GPS routes separately
+    const routes = getRoutes();
+    toAdd.forEach(r => {
+      if (r._coords && r._coords.length > 2) {
+        routes[`nike_${r.date}_${r.duration}`] = r._coords;
+      }
+      delete r._coords;
+    });
+    saveRoutes(routes);
 
     saveRuns([...existing, ...toAdd]);
     refreshDashboard();

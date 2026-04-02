@@ -260,7 +260,10 @@
     .sidebar-mobile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px; }
     .sidebar-mobile-grid .nav-item { padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid transparent; }
     .sidebar-mobile-grid .nav-section { display: none; }
-    .sidebar-footer { padding: 12px 0 0; border-top: 1px solid var(--border); }
+    .sidebar-footer { padding: 12px 0 0; border-top: 1px solid var(--border); width: 100%; }
+    .sidebar-footer-row { display: flex; align-items: center; gap: 8px; }
+    .sidebar-footer .goal-chip { flex: 1; margin-bottom: 0 !important; }
+    .sidebar-footer .goal-label { margin-bottom: 4px !important; }
     .nav-section { padding: 10px 0 4px; font-size: 10px; }
     .hamburger-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 20px; padding: 4px; }
 
@@ -275,7 +278,11 @@
     .landing-today { grid-template-columns: 1fr 1fr; }
     .landing-cards .landing-card:last-child { grid-column: span 2; }
 
-    /* Routes — stacked */
+    /* Routes drag handle */
+    .routes-drag-handle { display: flex; align-items: center; justify-content: center; height: 20px; background: var(--surface); border-bottom: 1px solid var(--border); cursor: ns-resize; flex-shrink: 0; touch-action: none; }
+    .routes-drag-pip { width: 32px; height: 3px; border-radius: 2px; background: var(--border2); }
+    /* Routes mobile list */
+    .routes-mobile-list { border-bottom: 1px solid var(--border); max-height: 40vh; overflow-y: auto; }
     #page-routes { margin: -16px; width: calc(100% + 32px); }
     .routes-mobile-list { border-bottom: 1px solid var(--border); max-height: 40vh; overflow-y: auto; }
     .routes-mobile-list.collapsed { max-height: 0; overflow: hidden; }
@@ -359,8 +366,10 @@
     </div>
     <div class="sidebar-footer">
       <div class="goal-label">Goal weight</div>
-      <div class="goal-chip" style="margin-bottom:14px;">220–225 lbs</div>
-      <button class="btn btn-ghost btn-sm" onclick="nav('data')" style="width:100%;justify-content:center;">Data &amp; imports</button>
+      <div class="sidebar-footer-row">
+        <div class="goal-chip">220–225 lbs</div>
+        <button class="btn btn-ghost btn-sm" onclick="nav('data')" style="white-space:nowrap;">Data &amp; imports</button>
+      </div>
     </div>
     </div><!-- end sidebar-body -->
   </nav>
@@ -703,6 +712,10 @@
             </div>
           </div>
           <div id="routes-list" style="overflow-y:auto;flex:1;"></div>
+          <!-- Drag handle (mobile only) -->
+          <div class="routes-drag-handle" id="routes-drag-handle" style="display:none;" onmousedown="startRoutesDrag(event)" ontouchstart="startRoutesDrag(event)">
+            <div class="routes-drag-pip"></div>
+          </div>
         </div>
         <!-- Map -->
         <div style="position:relative;overflow:hidden;" id="routes-map-container">
@@ -3097,34 +3110,63 @@ function initRoutesPageMobile() {
   const grid = document.getElementById('routes-grid');
   const listPanel = document.getElementById('routes-list-panel');
   const mapContainer = document.getElementById('routes-map-container');
+  const dragHandle = document.getElementById('routes-drag-handle');
 
   if (isMobile()) {
-    // Stack vertically
     grid.style.gridTemplateColumns = '1fr';
     grid.style.gridTemplateRows = 'auto 1fr';
     grid.style.height = '100vh';
     listPanel.style.borderRight = 'none';
     listPanel.style.borderBottom = '1px solid var(--border)';
     listPanel.style.overflow = 'visible';
-    // Show toggle button
+    listPanel.style.flexShrink = '0';
     if (toggle) toggle.style.display = 'flex';
-    // Set initial heights
+    if (dragHandle) dragHandle.style.display = 'flex';
     const list = document.getElementById('routes-list');
-    list.style.maxHeight = '40vh';
+    list.style.maxHeight = '38vh';
     list.style.overflow = 'auto';
-    if (mapContainer) mapContainer.style.height = 'calc(60vh - 52px)';
+    if (mapContainer) mapContainer.style.flex = '1';
   } else {
     grid.style.gridTemplateColumns = '300px 1fr';
     grid.style.gridTemplateRows = '';
     grid.style.height = '100vh';
     listPanel.style.borderRight = '1px solid var(--border)';
     listPanel.style.borderBottom = '';
+    listPanel.style.flexShrink = '';
     if (toggle) toggle.style.display = 'none';
+    if (dragHandle) dragHandle.style.display = 'none';
     const list = document.getElementById('routes-list');
     list.style.maxHeight = '';
     list.style.overflow = 'auto';
-    if (mapContainer) mapContainer.style.height = '';
+    if (mapContainer) mapContainer.style.flex = '';
   }
+}
+
+let dragStartY = 0, dragStartHeight = 0;
+function startRoutesDrag(e) {
+  e.preventDefault();
+  const list = document.getElementById('routes-list');
+  dragStartY = e.touches ? e.touches[0].clientY : e.clientY;
+  dragStartHeight = list.offsetHeight;
+
+  const onMove = ev => {
+    const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    const delta = y - dragStartY;
+    const newH = Math.max(60, Math.min(window.innerHeight * 0.75, dragStartHeight + delta));
+    list.style.maxHeight = newH + 'px';
+    if (routeMap) routeMap.invalidateSize();
+  };
+  const onUp = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchend', onUp);
+    if (routeMap) routeMap.invalidateSize();
+  };
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchend', onUp);
 }
 
 window.addEventListener('resize', () => {

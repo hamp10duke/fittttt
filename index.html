@@ -184,6 +184,9 @@
   .set-timer.running { background: var(--accent-dim); }
   .set-timer.done { color: var(--accent2); }
 
+  /* Routes full bleed */
+  #page-routes { margin: -32px; width: calc(100% + 64px); max-width: none; }
+
   /* Divider */
   .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
@@ -651,26 +654,27 @@
 
     <!-- ROUTES -->
     <div id="page-routes" class="page">
-      <div class="page-title">Routes</div>
-      <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;height:calc(100vh - 140px);">
+      <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;height:calc(100vh - 80px);margin:-32px;">
         <!-- Run list -->
-        <div style="display:flex;flex-direction:column;gap:0;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
-          <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn-ghost btn-sm" onclick="filterRoutes('all',this)" style="border-color:var(--accent);color:var(--accent);">All</button>
-            <button class="btn btn-ghost btn-sm" onclick="filterRoutes('nike',this)">Nike</button>
-            <button class="btn btn-ghost btn-sm" onclick="filterRoutes('strava',this)">Strava</button>
+        <div style="display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);overflow:hidden;">
+          <div style="padding:16px 16px 12px;border-bottom:1px solid var(--border);">
+            <div style="font-family:'WTGaramono',serif;font-size:22px;margin-bottom:10px;">Routes</div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-ghost btn-sm" onclick="filterRoutes('all',this)" style="border-color:var(--accent);color:var(--accent);">All</button>
+              <button class="btn btn-ghost btn-sm" onclick="filterRoutes('nike',this)">Nike</button>
+              <button class="btn btn-ghost btn-sm" onclick="filterRoutes('strava',this)">Strava</button>
+            </div>
           </div>
           <div id="routes-list" style="overflow-y:auto;flex:1;"></div>
         </div>
         <!-- Map -->
-        <div style="position:relative;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);">
+        <div style="position:relative;overflow:hidden;">
           <div id="route-map" style="width:100%;height:100%;"></div>
-          <div id="route-map-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface2);flex-direction:column;gap:8px;">
+          <div id="route-map-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface2);flex-direction:column;gap:8px;pointer-events:none;">
             <div style="font-size:32px;opacity:0.3;">◎</div>
             <div style="font-size:13px;color:var(--text3);">Select a run to view its route</div>
           </div>
-          <!-- Route info overlay -->
-          <div id="route-info" style="display:none;position:absolute;top:12px;left:12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;min-width:160px;">
+          <div id="route-info" style="display:none;position:absolute;top:12px;left:12px;z-index:1000;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;min-width:160px;">
             <div id="ri-date" style="font-family:'DM Mono',monospace;color:var(--text3);font-size:10px;margin-bottom:4px;"></div>
             <div id="ri-dist" style="font-size:18px;font-weight:500;color:var(--text);font-family:'DM Mono',monospace;"></div>
             <div id="ri-detail" style="color:var(--text2);margin-top:2px;"></div>

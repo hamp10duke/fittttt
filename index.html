@@ -301,6 +301,10 @@
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 6h6M5 9h4"/></svg>
       My plan
     </div>
+    <div class="nav-item" onclick="nav('programs')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/><path d="M8 2v1M8 13v1M2 8h1M13 8h1"/></svg>
+      Programs
+    </div>
     <div class="nav-section">Review</div>
     <div class="nav-item" onclick="nav('history')">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
@@ -317,21 +321,7 @@
     <div class="sidebar-footer">
       <div class="goal-label">Goal weight</div>
       <div class="goal-chip" style="margin-bottom:14px;">220–225 lbs</div>
-      <div class="goal-label" style="margin-bottom:4px;">Strava</div>
-      <div id="strava-section" style="margin-bottom:12px;">
-        <button class="btn btn-ghost btn-sm" id="strava-btn" onclick="stravaConnect()" style="width:100%;justify-content:center;border-color:rgba(252,76,2,0.4);color:#fc4c02;">⚡ Connect Strava</button>
-        <div id="strava-status" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:6px;display:none;"></div>
-        <button class="btn btn-ghost btn-sm" id="strava-sync-btn" onclick="stravaSyncRuns()" style="width:100%;justify-content:center;margin-top:6px;display:none;">↓ Sync runs</button>
-      </div>
-      <div class="goal-label" style="margin-bottom:4px;">Sync</div>
-      <div id="sync-indicator" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:12px;">Loading...</div>
-      <div class="goal-label" style="margin-bottom:8px;">Data</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <button class="btn btn-ghost btn-sm" onclick="exportData()" style="width:100%;justify-content:center;">↓ Export data</button>
-        <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">↑ Import data<input type="file" accept=".json" onchange="importData(event)" style="display:none;"></label>
-        <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">↑ Import Hevy CSV<input type="file" accept=".csv" onchange="importHevyCSV(event)" style="display:none;"></label>
-        <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">↑ Import Nike TCX<input type="file" accept=".tcx,.zip" onchange="importNikeTCX(event)" style="display:none;"></label>
-      </div>
+      <button class="btn btn-ghost btn-sm" onclick="nav('data')" style="width:100%;justify-content:center;">Data &amp; imports</button>
     </div>
   </nav>
 
@@ -399,12 +389,17 @@
       <div class="page-title">Dashboard</div>
       <div class="page-sub" id="dash-date">Loading...</div>
 
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;" id="stat-cards">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="stat-cards">
         <div class="stat"><div class="stat-label">Current weight</div><div><span class="stat-val" id="stat-weight">—</span><span class="stat-unit">lbs</span></div><div class="stat-delta delta-neutral" id="stat-weight-delta">No data yet</div></div>
         <div class="stat"><div class="stat-label">To goal</div><div><span class="stat-val" id="stat-to-goal">—</span><span class="stat-unit">lbs</span></div><div class="stat-delta delta-neutral" id="stat-goal-pct">—</div></div>
         <div class="stat"><div class="stat-label">Workouts</div><div><span class="stat-val" id="stat-workouts">0</span></div><div class="stat-delta delta-neutral" id="stat-workouts-sub">total logged</div></div>
+        <div class="stat" onclick="navTo('programs')" style="cursor:pointer;" title="View programs">
+          <div class="stat-label" id="stat-prog-label">Program</div>
+          <div><span class="stat-val" id="stat-prog-week">—</span><span class="stat-unit" id="stat-prog-of"></span></div>
+          <div class="stat-delta delta-neutral" id="stat-prog-name"></div>
+        </div>
         <div class="stat"><div class="stat-label">Runs logged</div><div><span class="stat-val" id="stat-runs">0</span></div><div class="stat-delta delta-neutral" id="stat-runs-sub">total logged</div></div>
-        <div class="stat" style="grid-column:span 2;"><div class="stat-label">Today's calories</div><div><span class="stat-val" id="stat-cal">—</span><span class="stat-unit">/ 2500</span></div><div class="stat-delta delta-neutral" id="stat-cal-sub">Log food to track</div></div>
+        <div class="stat" style="grid-column:span 3;"><div class="stat-label">Today's calories</div><div><span class="stat-val" id="stat-cal">—</span><span class="stat-unit">/ 2500</span></div><div class="stat-delta delta-neutral" id="stat-cal-sub">Log food to track</div></div>
       </div>
 
       <!-- Goal progress -->
@@ -685,6 +680,129 @@
       </div>
     </div>
 
+    <!-- DATA -->
+    <div id="page-data" class="page">
+      <div class="page-title">Data &amp; imports</div>
+      <div class="page-sub">Manage your data sources and exports</div>
+
+      <!-- Import sources -->
+      <div class="card-title" style="margin-bottom:10px;">Import sources</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+
+        <!-- Hevy CSV -->
+        <div class="card" style="position:relative;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+            <div>
+              <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px;">Hevy</div>
+              <div style="font-size:11px;color:var(--text3);">Workout history CSV</div>
+            </div>
+            <div id="hevy-badge" style="display:none;font-size:10px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:10px;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(184,240,122,0.3);">✓ Imported</div>
+          </div>
+          <div id="hevy-meta" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:12px;min-height:14px;"></div>
+          <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            ↑ Import Hevy CSV
+            <input type="file" accept=".csv" onchange="importHevyCSV(event)" style="display:none;">
+          </label>
+        </div>
+
+        <!-- Nike TCX -->
+        <div class="card" style="position:relative;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+            <div>
+              <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px;">Nike Run Club</div>
+              <div style="font-size:11px;color:var(--text3);">TCX activity files (.zip)</div>
+            </div>
+            <div id="nike-badge" style="display:none;font-size:10px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:10px;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(184,240,122,0.3);">✓ Imported</div>
+          </div>
+          <div id="nike-meta" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:12px;min-height:14px;"></div>
+          <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            ↑ Import Nike TCX
+            <input type="file" accept=".tcx,.zip" onchange="importNikeTCX(event)" style="display:none;">
+          </label>
+        </div>
+
+        <!-- Strava -->
+        <div class="card">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+            <div>
+              <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px;">Strava</div>
+              <div style="font-size:11px;color:var(--text3);">Live run sync via OAuth</div>
+            </div>
+            <div id="strava-badge-data" style="display:none;font-size:10px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:10px;background:rgba(252,76,2,0.12);color:#fc4c02;border:1px solid rgba(252,76,2,0.3);">⚡ Connected</div>
+          </div>
+          <div id="strava-meta-data" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:12px;min-height:14px;"></div>
+          <button class="btn btn-ghost btn-sm" id="strava-btn-data" onclick="stravaConnect()" style="width:100%;justify-content:center;border-color:rgba(252,76,2,0.4);color:#fc4c02;">⚡ Connect Strava</button>
+          <button class="btn btn-ghost btn-sm" id="strava-sync-btn-data" onclick="stravaSyncRuns()" style="width:100%;justify-content:center;margin-top:6px;display:none;">↓ Sync runs</button>
+        </div>
+
+        <!-- App backup -->
+        <div class="card">
+          <div style="margin-bottom:10px;">
+            <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px;">App backup</div>
+            <div style="font-size:11px;color:var(--text3);">Export / restore all data as JSON</div>
+          </div>
+          <div id="backup-meta" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:12px;min-height:14px;"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="btn btn-ghost btn-sm" onclick="exportData()" style="width:100%;justify-content:center;">↓ Export backup</button>
+            <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              ↑ Restore backup
+              <input type="file" accept=".json" onchange="importData(event)" style="display:none;">
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Data summary -->
+      <div class="card-title" style="margin-bottom:10px;">Current data</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" id="data-summary">
+        <div class="stat"><div class="stat-label">Workouts</div><div><span class="stat-val" id="ds-workouts">—</span></div></div>
+        <div class="stat"><div class="stat-label">Runs</div><div><span class="stat-val" id="ds-runs">—</span></div></div>
+        <div class="stat"><div class="stat-label">GPS routes</div><div><span class="stat-val" id="ds-routes">—</span></div></div>
+        <div class="stat"><div class="stat-label">Meals logged</div><div><span class="stat-val" id="ds-meals">—</span></div></div>
+      </div>
+    </div>
+
+    <!-- PROGRAMS -->
+    <div id="page-programs" class="page">
+      <div class="page-title">Programs</div>
+      <div class="page-sub" id="prog-status">Loading...</div>
+
+      <!-- Active program progress -->
+      <div class="card" style="margin-bottom:20px;" id="prog-active-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div>
+            <div class="card-title" style="margin-bottom:4px;">Active program</div>
+            <div id="prog-active-name" style="font-family:'WTGaramono',serif;font-size:22px;"></div>
+            <div id="prog-active-sub" style="font-size:12px;color:var(--text3);margin-top:2px;"></div>
+          </div>
+          <div style="text-align:right;">
+            <div id="prog-week-label" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Week</div>
+            <div id="prog-week-num" style="font-family:'DM Mono',monospace;font-size:32px;font-weight:400;line-height:1;color:var(--text);">—</div>
+            <div id="prog-week-of" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;"></div>
+          </div>
+        </div>
+        <div class="progress-bar" style="margin-bottom:8px;"><div class="progress-fill" id="prog-progress-fill" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;">
+          <span id="prog-start-label"></span>
+          <span id="prog-end-label"></span>
+        </div>
+
+        <!-- Travel mode toggle -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--text);">✈ Travel mode</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">Swaps workouts to bodyweight versions</div>
+          </div>
+          <button id="travel-toggle-btn" onclick="toggleTravelMode()" style="padding:6px 16px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif;">Off</button>
+        </div>
+      </div>
+
+      <!-- All programs -->
+      <div class="card-title">All programs</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;" id="prog-list"></div>
+    </div>
+
     <!-- FOOD & DRINK -->
     <div id="page-food" class="page">
       <div class="page-title">Food & drink</div>
@@ -783,97 +901,10 @@
     <!-- PLAN REFERENCE -->
     <div id="page-plan" class="page">
       <div class="page-title">My plan</div>
-      <div class="page-sub">5-day split — 3 lifts · 2 runs · 2 rest</div>
-
-      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;" id="plan-tabs">
-        <button class="btn btn-ghost btn-sm" onclick="showPlanTab('push',this)" style="border-color:var(--accent);color:var(--accent);">Monday — Push</button>
-        <button class="btn btn-ghost btn-sm" onclick="showPlanTab('pull',this)">Wednesday — Pull</button>
-        <button class="btn btn-ghost btn-sm" onclick="showPlanTab('legs',this)">Friday — Legs</button>
-        <button class="btn btn-ghost btn-sm" onclick="showPlanTab('cardio',this)">Cardio runs</button>
-        <button class="btn btn-ghost btn-sm" onclick="showPlanTab('travel_push',this)">✈ Travel — Push</button>
-        <button class="btn btn-ghost btn-sm" onclick="showPlanTab('travel_pull',this)">✈ Travel — Pull</button>
-        <button class="btn btn-ghost btn-sm" onclick="showPlanTab('travel_legs',this)">✈ Travel — Legs</button>
-      </div>
-
-      <div id="plantab-push" class="plan-tab">
-        <div class="card">
-          <div class="card-title">Monday — Push · chest, shoulders, triceps + abs</div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>#</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Note</th></tr></thead>
-            <tbody id="plan-push-rows"></tbody>
-          </table></div>
-        </div>
-      </div>
-      <div id="plantab-pull" class="plan-tab" style="display:none">
-        <div class="card">
-          <div class="card-title">Wednesday — Pull · back, biceps + abs</div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>#</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Note</th></tr></thead>
-            <tbody id="plan-pull-rows"></tbody>
-          </table></div>
-        </div>
-      </div>
-      <div id="plantab-legs" class="plan-tab" style="display:none">
-        <div class="card">
-          <div class="card-title">Friday — Legs · quads, hamstrings, calves + abs</div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>#</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Note</th></tr></thead>
-            <tbody id="plan-legs-rows"></tbody>
-          </table></div>
-        </div>
-      </div>
-      <div id="plantab-cardio" class="plan-tab" style="display:none">
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">Tuesday — Steady state</div>
-            <table style="width:100%;font-size:13px;">
-              <tr><td style="color:var(--text3);padding:6px 0;">Duration</td><td class="num" style="text-align:right">35–45 min</td></tr>
-              <tr><td style="color:var(--text3);padding:6px 0;">Zone</td><td class="num" style="text-align:right">Zone 2</td></tr>
-              <tr><td style="color:var(--text3);padding:6px 0;">Pace</td><td class="num" style="text-align:right">Conversational</td></tr>
-              <tr><td colspan="2" style="padding-top:10px;font-size:12px;color:var(--text3);">Fat-burning aerobic base. Should be able to hold a sentence.</td></tr>
-            </table>
-          </div>
-          <div class="card">
-            <div class="card-title">Saturday — Intervals</div>
-            <table style="width:100%;font-size:13px;">
-              <tr><td style="color:var(--text3);padding:6px 0;">Total time</td><td class="num" style="text-align:right">30–35 min</td></tr>
-              <tr><td style="color:var(--text3);padding:6px 0;">Zone</td><td class="num" style="text-align:right">Zone 4–5</td></tr>
-              <tr><td style="color:var(--text3);padding:6px 0;">Format</td><td class="num" style="text-align:right">1 min hard / 2 easy</td></tr>
-              <tr><td style="color:var(--text3);padding:6px 0;">Intervals</td><td class="num" style="text-align:right">8–10 repeats</td></tr>
-              <tr><td colspan="2" style="padding-top:10px;font-size:12px;color:var(--text3);">5-min warm-up jog first. Boosts EPOC for fat loss.</td></tr>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div id="plantab-travel_push" class="plan-tab" style="display:none">
-        <div class="card">
-          <div class="card-title">Travel — Push · bodyweight · chest, shoulders, triceps + abs</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">No equipment needed — hotel room floor space only. Use slow 3s negatives on every rep.</div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>#</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Note</th></tr></thead>
-            <tbody id="plan-travel_push-rows"></tbody>
-          </table></div>
-        </div>
-      </div>
-      <div id="plantab-travel_pull" class="plan-tab" style="display:none">
-        <div class="card">
-          <div class="card-title">Travel — Pull · bodyweight · back, biceps + abs</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">Uses a sturdy desk/table for inverted rows, a towel around a door handle for rows.</div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>#</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Note</th></tr></thead>
-            <tbody id="plan-travel_pull-rows"></tbody>
-          </table></div>
-        </div>
-      </div>
-      <div id="plantab-travel_legs" class="plan-tab" style="display:none">
-        <div class="card">
-          <div class="card-title">Travel — Legs · bodyweight · quads, hamstrings, glutes, calves + abs</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">No equipment needed — use the bed for Bulgarian split squats, a step for calf raises.</div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>#</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Note</th></tr></thead>
-            <tbody id="plan-travel_legs-rows"></tbody>
-          </table></div>
-        </div>
+      <div class="page-sub" id="plan-prog-title">Loading...</div>
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;" id="plan-tabs"></div>
+      <div class="card">
+        <div id="plan-tabs-container"></div>
       </div>
     </div>
 
@@ -940,7 +971,7 @@ function saveMeals(v)    { cacheSet('meals', v);    sbWrite('meals', v); }
 async function syncFromSupabase() {
   const syncIndicator = document.getElementById('sync-indicator');
   if (syncIndicator) { syncIndicator.textContent = 'Syncing...'; syncIndicator.style.color = 'var(--text3)'; }
-  const keys = ['workouts', 'runs', 'bodystats', 'meals', 'routes'];
+  const keys = ['workouts', 'runs', 'bodystats', 'meals', 'routes', 'program_state'];
   await Promise.all(keys.map(k => sbRead(k)));
   refreshHome();
   refreshDashboard();
@@ -967,6 +998,8 @@ function navTo(page) {
   if (page === 'log-workout') { initWorkoutForm(); resetTimers(); timerShow(); }
   else timerHide();
   if (page === 'routes') initRoutesPage();
+  if (page === 'programs') renderProgramsPage();
+  if (page === 'data') renderDataPage();
   if (page === 'food') initFoodPage();
   if (page === 'home') refreshHome();
 }
@@ -1048,6 +1081,15 @@ function refreshDashboard() {
   // Workout / run counts
   document.getElementById('stat-workouts').textContent = workouts.length;
   document.getElementById('stat-runs').textContent = runs.length;
+
+  // Program week
+  const prog = getActiveProgram();
+  const week = getProgramWeek();
+  const travel = isTravelMode();
+  document.getElementById('stat-prog-week').textContent = week;
+  document.getElementById('stat-prog-of').textContent = ` / ${prog.weeks}`;
+  document.getElementById('stat-prog-name').textContent = prog.name + (travel ? ' · ✈ Travel' : '');
+  document.getElementById('stat-prog-label').textContent = 'Week';
 
   // Today's calories
   const todayFood = getMealsSummaryForDate(today());
@@ -1270,79 +1312,377 @@ function timerHide() {
   document.querySelector('.main').classList.remove('timer-visible');
   stopLiveSync();
 }
-const PLAN = {
-  push: [
-    { name: 'Barbell bench press',           sets: 4, reps: '5–6',   note: 'Primary chest driver' },
-    { name: 'Dumbbell incline press',         sets: 3, reps: '8–10',  note: 'Upper chest' },
-    { name: 'Dumbbell overhead press',        sets: 3, reps: '8–10',  note: 'Seated or standing' },
-    { name: 'Dumbbell lateral raises',        sets: 3, reps: '12–15', note: 'Slow, controlled' },
-    { name: 'Dumbbell tricep overhead ext.',  sets: 3, reps: '10–12', note: 'Long head emphasis' },
-    { name: 'Diamond push-ups',               sets: 2, reps: 'Failure',note: 'Finisher' },
-    { name: 'Hanging knee raise',             sets: 3, reps: '12–15', note: 'Lower abs' },
-    { name: 'Weighted crunch (DB on chest)',  sets: 3, reps: '15–20', note: 'Add load over time' },
-    { name: 'Plank with shoulder tap',        sets: 3, reps: '30 sec', note: 'Anti-rotation core' },
-  ],
-  pull: [
-    { name: 'Barbell bent-over row',          sets: 4, reps: '5–6',   note: 'Heavy, overhand grip' },
-    { name: 'Dumbbell single-arm row',        sets: 3, reps: '8–10',  note: 'Brace on bench' },
-    { name: 'Dumbbell chest-supported row',   sets: 3, reps: '10–12', note: 'Prone on incline bench' },
-    { name: 'Dumbbell face pulls (bent-over)',sets: 3, reps: '12–15', note: 'Rear delt / upper back' },
-    { name: 'Dumbbell curl (alternating)',    sets: 3, reps: '10–12', note: 'Supinate at top' },
-    { name: 'Hammer curl',                    sets: 2, reps: '12',    note: 'Brachialis / forearms' },
-    { name: 'Ab wheel / barbell rollout',     sets: 3, reps: '8–12',  note: 'Use barbell if no wheel' },
-    { name: 'Bicycle crunch',                 sets: 3, reps: '20/side',note: 'Obliques, slow' },
-    { name: 'Dead bug',                       sets: 3, reps: '10/side',note: 'Lower back flat' },
-  ],
-  legs: [
-    { name: 'Barbell Romanian deadlift',      sets: 4, reps: '5–6',   note: 'Hamstring hinge focus' },
-    { name: 'Dumbbell goblet squat',          sets: 4, reps: '8–10',  note: 'Use 110 lb DB' },
-    { name: 'DB split squat (rear foot elevated)', sets: 3, reps: '8–10/leg', note: 'Bench for rear foot' },
-    { name: 'Dumbbell walking lunges',        sets: 3, reps: '12/leg', note: 'Down a hallway or outside' },
-    { name: 'Single-leg calf raise',          sets: 3, reps: '15–20', note: 'Edge of a step' },
-    { name: 'Weighted crunch (DB on chest)',  sets: 3, reps: '15–20', note: 'Add load progressively' },
-    { name: 'Reverse crunch',                 sets: 3, reps: '15',    note: 'Hips curl up off floor' },
-    { name: 'Side plank',                     sets: 2, reps: '30–40 sec/side', note: 'Oblique stability' },
-  ],
-  travel_push: [
-    { name: 'Push-up',                        sets: 4, reps: '15–20',  note: 'Slow 3s down, 1s pause at bottom' },
-    { name: 'Wide push-up',                   sets: 3, reps: '12–15',  note: 'Hands wider than shoulder — chest emphasis' },
-    { name: 'Pike push-up',                   sets: 3, reps: '10–12',  note: 'Hips high, head through — shoulder press pattern' },
-    { name: 'Diamond push-up',                sets: 3, reps: '10–12',  note: 'Hands together under chest — tricep focus' },
-    { name: 'Decline push-up',                sets: 3, reps: '10–12',  note: 'Feet on bed or chair — upper chest' },
-    { name: 'Lateral raise (no weight)',      sets: 3, reps: '20–25',  note: 'Slow — pause 2s at top each rep' },
-    { name: 'Lying leg raise',                sets: 3, reps: '12–15',  note: 'Lower abs — slow and controlled' },
-    { name: 'Crunch',                         sets: 3, reps: '20–25',  note: 'Slow 2s up, 2s down — no momentum' },
-    { name: 'Plank with shoulder tap',        sets: 3, reps: '30 sec', note: 'Anti-rotation core stability' },
-  ],
-  travel_pull: [
-    { name: 'Inverted row (under desk/table)', sets: 4, reps: '8–12',        note: 'Lie under sturdy table, pull chest to edge' },
-    { name: 'Towel door row (single arm)',    sets: 3, reps: '12–15',        note: 'Loop towel around door handle, lean back and row' },
-    { name: 'Superman hold',                  sets: 3, reps: '12 · 2s hold', note: 'Prone on floor, lift arms + chest' },
-    { name: 'Prone Y-T-W raise',              sets: 3, reps: '10 each',      note: 'Face down, raise arms in Y then T then W' },
-    { name: 'Isometric bicep curl (towel)',   sets: 3, reps: '8 · 5s holds', note: 'Stand on towel, pull up hard — hold 5s' },
-    { name: 'Chin-up / pull-up',              sets: 3, reps: 'Max reps',     note: 'Use door frame bar if available' },
-    { name: 'Dead bug',                       sets: 3, reps: '10/side',      note: 'Opposite arm/leg extension, back flat' },
-    { name: 'Bicycle crunch',                 sets: 3, reps: '20/side',      note: 'Obliques — full slow rotation' },
-    { name: 'Hollow body hold',               sets: 3, reps: '20–30 sec',    note: 'Arms overhead, lower back pressed flat' },
-  ],
-  travel_legs: [
-    { name: 'Bulgarian split squat',          sets: 4, reps: '10–12/leg', note: 'Rear foot on bed — slow 3s down, pause at bottom' },
-    { name: 'Jump squat',                     sets: 4, reps: '15–20',     note: 'Squat deep, explode up — power without load' },
-    { name: 'Walking lunge',                  sets: 3, reps: '16/leg',    note: 'Long stride, upright torso — corridor if possible' },
-    { name: 'Single-leg Romanian deadlift',   sets: 3, reps: '10–12/leg', note: 'Balance on one leg, hinge forward' },
-    { name: 'Glute bridge',                   sets: 3, reps: '20–25',     note: 'Pause 2s at top — add single leg for more load' },
-    { name: 'Single-leg calf raise',          sets: 3, reps: '20–25/leg', note: 'Use a step or door threshold — full range' },
-    { name: 'Reverse crunch',                 sets: 3, reps: '15–20',     note: 'Hips curl up off the floor' },
-    { name: 'Side plank',                     sets: 2, reps: '30–40 sec/side', note: 'Oblique and lateral core stability' },
-  ],
+// ── Programs ──────────────────────────────────────────
+const PROGRAMS = {
+  cut: {
+    id: 'cut',
+    name: 'Cut',
+    subtitle: 'Push / Pull / Legs',
+    goal: 'Lose fat, preserve muscle',
+    weeks: 12,
+    color: '#7F77DD',
+    days: ['push','pull','legs'],
+    schedule: ['push','run','pull','rest','legs','run','rest'],
+    workouts: {
+      push: [
+        { name: 'Barbell bench press',           sets: 4, reps: '5–6',   note: 'Primary chest driver' },
+        { name: 'Dumbbell incline press',         sets: 3, reps: '8–10',  note: 'Upper chest' },
+        { name: 'Dumbbell overhead press',        sets: 3, reps: '8–10',  note: 'Seated or standing' },
+        { name: 'Dumbbell lateral raises',        sets: 3, reps: '12–15', note: 'Slow, controlled' },
+        { name: 'Dumbbell tricep overhead ext.',  sets: 3, reps: '10–12', note: 'Long head emphasis' },
+        { name: 'Diamond push-ups',               sets: 2, reps: 'Failure',note: 'Finisher' },
+        { name: 'Hanging knee raise',             sets: 3, reps: '12–15', note: 'Lower abs' },
+        { name: 'Weighted crunch (DB on chest)',  sets: 3, reps: '15–20', note: 'Add load over time' },
+        { name: 'Plank with shoulder tap',        sets: 3, reps: '30 sec', note: 'Anti-rotation core' },
+      ],
+      pull: [
+        { name: 'Barbell bent-over row',          sets: 4, reps: '5–6',   note: 'Heavy, overhand grip' },
+        { name: 'Dumbbell single-arm row',        sets: 3, reps: '8–10',  note: 'Brace on bench' },
+        { name: 'Dumbbell chest-supported row',   sets: 3, reps: '10–12', note: 'Prone on incline bench' },
+        { name: 'Dumbbell face pulls (bent-over)',sets: 3, reps: '12–15', note: 'Rear delt / upper back' },
+        { name: 'Dumbbell curl (alternating)',    sets: 3, reps: '10–12', note: 'Supinate at top' },
+        { name: 'Hammer curl',                    sets: 2, reps: '12',    note: 'Brachialis / forearms' },
+        { name: 'Ab wheel / barbell rollout',     sets: 3, reps: '8–12',  note: 'Use barbell if no wheel' },
+        { name: 'Bicycle crunch',                 sets: 3, reps: '20/side',note: 'Obliques, slow' },
+        { name: 'Dead bug',                       sets: 3, reps: '10/side',note: 'Lower back flat' },
+      ],
+      legs: [
+        { name: 'Barbell Romanian deadlift',      sets: 4, reps: '5–6',   note: 'Hamstring hinge focus' },
+        { name: 'Dumbbell goblet squat',          sets: 4, reps: '8–10',  note: 'Use 110 lb DB' },
+        { name: 'DB split squat (rear foot elevated)', sets: 3, reps: '8–10/leg', note: 'Bench for rear foot' },
+        { name: 'Dumbbell walking lunges',        sets: 3, reps: '12/leg', note: 'Down a hallway or outside' },
+        { name: 'Single-leg calf raise',          sets: 3, reps: '15–20', note: 'Edge of a step' },
+        { name: 'Weighted crunch (DB on chest)',  sets: 3, reps: '15–20', note: 'Add load progressively' },
+        { name: 'Reverse crunch',                 sets: 3, reps: '15',    note: 'Hips curl up off floor' },
+        { name: 'Side plank',                     sets: 2, reps: '30–40 sec/side', note: 'Oblique stability' },
+      ],
+    },
+    travel: {
+      push: [
+        { name: 'Push-up',                        sets: 4, reps: '15–20',  note: 'Slow 3s down, 1s pause' },
+        { name: 'Wide push-up',                   sets: 3, reps: '12–15',  note: 'Chest emphasis' },
+        { name: 'Pike push-up',                   sets: 3, reps: '10–12',  note: 'Shoulder press pattern' },
+        { name: 'Diamond push-up',                sets: 3, reps: '10–12',  note: 'Tricep focus' },
+        { name: 'Decline push-up',                sets: 3, reps: '10–12',  note: 'Feet on bed or chair' },
+        { name: 'Lateral raise (no weight)',      sets: 3, reps: '20–25',  note: 'Pause 2s at top' },
+        { name: 'Lying leg raise',                sets: 3, reps: '12–15',  note: 'Lower abs' },
+        { name: 'Crunch',                         sets: 3, reps: '20–25',  note: 'Slow 2s up, 2s down' },
+        { name: 'Plank with shoulder tap',        sets: 3, reps: '30 sec', note: 'Anti-rotation core' },
+      ],
+      pull: [
+        { name: 'Inverted row (under desk/table)', sets: 4, reps: '8–12',        note: 'Lie under sturdy table' },
+        { name: 'Towel door row (single arm)',    sets: 3, reps: '12–15',        note: 'Loop towel around door handle' },
+        { name: 'Superman hold',                  sets: 3, reps: '12 · 2s hold', note: 'Prone on floor' },
+        { name: 'Prone Y-T-W raise',              sets: 3, reps: '10 each',      note: 'Face down, arms in Y/T/W' },
+        { name: 'Isometric bicep curl (towel)',   sets: 3, reps: '8 · 5s holds', note: 'Stand on towel, pull up' },
+        { name: 'Chin-up / pull-up',              sets: 3, reps: 'Max reps',     note: 'Door frame bar if available' },
+        { name: 'Dead bug',                       sets: 3, reps: '10/side',      note: 'Back flat to floor' },
+        { name: 'Bicycle crunch',                 sets: 3, reps: '20/side',      note: 'Full slow rotation' },
+        { name: 'Hollow body hold',               sets: 3, reps: '20–30 sec',    note: 'Back pressed flat' },
+      ],
+      legs: [
+        { name: 'Bulgarian split squat',          sets: 4, reps: '10–12/leg', note: 'Rear foot on bed' },
+        { name: 'Jump squat',                     sets: 4, reps: '15–20',     note: 'Explode up — power without load' },
+        { name: 'Walking lunge',                  sets: 3, reps: '16/leg',    note: 'Long stride, corridor if possible' },
+        { name: 'Single-leg Romanian deadlift',   sets: 3, reps: '10–12/leg', note: 'Balance on one leg, hinge' },
+        { name: 'Glute bridge',                   sets: 3, reps: '20–25',     note: 'Pause 2s at top' },
+        { name: 'Single-leg calf raise',          sets: 3, reps: '20–25/leg', note: 'Use a step or door threshold' },
+        { name: 'Reverse crunch',                 sets: 3, reps: '15–20',     note: 'Hips curl up off floor' },
+        { name: 'Side plank',                     sets: 2, reps: '30–40 sec/side', note: 'Oblique stability' },
+      ],
+    },
+  },
+
+  recomp: {
+    id: 'recomp',
+    name: 'Recomposition',
+    subtitle: 'Upper / Lower Split',
+    goal: 'Build muscle, maintain weight',
+    weeks: 12,
+    color: '#1D9E75',
+    days: ['upper_a','lower_a','upper_b','lower_b'],
+    schedule: ['upper_a','run','lower_a','rest','upper_b','lower_b','rest'],
+    workouts: {
+      upper_a: [
+        { name: 'Barbell bench press',           sets: 4, reps: '6–8',   note: 'Controlled descent' },
+        { name: 'Dumbbell bent-over row',        sets: 4, reps: '6–8',   note: 'Heavy, squeeze at top' },
+        { name: 'Dumbbell overhead press',       sets: 3, reps: '8–10',  note: 'Strict form' },
+        { name: 'Dumbbell incline curl',         sets: 3, reps: '10–12', note: 'Full stretch at bottom' },
+        { name: 'Skull crusher (DB)',            sets: 3, reps: '10–12', note: 'Elbows locked in' },
+        { name: 'Cable face pull (DB bent-over)',sets: 3, reps: '15',    note: 'External rotation focus' },
+        { name: 'Ab wheel rollout',              sets: 3, reps: '8–12',  note: 'Core anti-extension' },
+      ],
+      lower_a: [
+        { name: 'Barbell Romanian deadlift',     sets: 4, reps: '6–8',   note: 'Hinge pattern, heavy' },
+        { name: 'Dumbbell goblet squat',         sets: 4, reps: '8–10',  note: 'Deep, controlled' },
+        { name: 'DB Bulgarian split squat',      sets: 3, reps: '8–10/leg', note: 'Quad dominant' },
+        { name: 'Dumbbell leg curl (lying)',     sets: 3, reps: '10–12', note: 'Slow eccentric' },
+        { name: 'Single-leg calf raise',         sets: 4, reps: '15–20', note: 'Full range' },
+        { name: 'Reverse crunch',                sets: 3, reps: '15',    note: 'Lower abs' },
+        { name: 'Side plank',                    sets: 2, reps: '40 sec/side', note: 'Lateral core' },
+      ],
+      upper_b: [
+        { name: 'Dumbbell incline press',        sets: 4, reps: '8–10',  note: 'Upper chest focus' },
+        { name: 'Dumbbell chest-supported row',  sets: 4, reps: '8–10',  note: 'Strict, no momentum' },
+        { name: 'Dumbbell lateral raise',        sets: 4, reps: '12–15', note: 'Slow, no swinging' },
+        { name: 'Dumbbell hammer curl',          sets: 3, reps: '10–12', note: 'Brachialis focus' },
+        { name: 'Overhead tricep ext. (DB)',     sets: 3, reps: '10–12', note: 'Long head stretch' },
+        { name: 'Dumbbell shrug',                sets: 3, reps: '15',    note: 'Hold 2s at top' },
+        { name: 'Plank',                         sets: 3, reps: '45 sec', note: 'Full body tension' },
+      ],
+      lower_b: [
+        { name: 'Dumbbell sumo squat',           sets: 4, reps: '8–10',  note: 'Wide stance, glute focus' },
+        { name: 'Dumbbell walking lunge',        sets: 3, reps: '12/leg', note: 'Long stride' },
+        { name: 'Single-leg RDL',                sets: 3, reps: '10/leg', note: 'Balance and hamstring' },
+        { name: 'Glute bridge (single leg)',     sets: 3, reps: '15/leg', note: 'Pause at top' },
+        { name: 'Standing calf raise (DB)',      sets: 4, reps: '20',    note: 'Full ROM' },
+        { name: 'Dead bug',                      sets: 3, reps: '10/side', note: 'Opposite arm/leg' },
+        { name: 'Bicycle crunch',                sets: 3, reps: '20/side', note: 'Slow, full rotation' },
+      ],
+    },
+    travel: {
+      upper_a: [
+        { name: 'Push-up',                       sets: 4, reps: '15–20', note: 'Slow 3s down' },
+        { name: 'Inverted row',                  sets: 4, reps: '10–12', note: 'Under sturdy table' },
+        { name: 'Pike push-up',                  sets: 3, reps: '10–12', note: 'Shoulder press pattern' },
+        { name: 'Isometric bicep curl (towel)',  sets: 3, reps: '8 · 5s holds', note: 'Pull hard' },
+        { name: 'Diamond push-up',               sets: 3, reps: '10–12', note: 'Tricep focus' },
+        { name: 'Prone Y-T-W raise',             sets: 3, reps: '10 each', note: 'Rear delt' },
+        { name: 'Ab wheel / plank',              sets: 3, reps: '30 sec', note: 'Core' },
+      ],
+      lower_a: [
+        { name: 'Bulgarian split squat',         sets: 4, reps: '10–12/leg', note: 'Rear foot on bed' },
+        { name: 'Jump squat',                    sets: 4, reps: '15',    note: 'Power focus' },
+        { name: 'Single-leg RDL',                sets: 3, reps: '10/leg', note: 'Balance and hamstring' },
+        { name: 'Glute bridge',                  sets: 3, reps: '20',    note: 'Pause at top' },
+        { name: 'Single-leg calf raise',         sets: 4, reps: '20/leg', note: 'Step edge' },
+        { name: 'Reverse crunch',                sets: 3, reps: '15',    note: 'Lower abs' },
+        { name: 'Side plank',                    sets: 2, reps: '40 sec/side', note: 'Lateral core' },
+      ],
+      upper_b: [
+        { name: 'Decline push-up',               sets: 4, reps: '12–15', note: 'Feet on bed' },
+        { name: 'Towel door row',                sets: 4, reps: '12–15', note: 'Single arm' },
+        { name: 'Lateral raise (no weight)',     sets: 4, reps: '20–25', note: 'Pause 2s at top' },
+        { name: 'Hammer curl (no weight)',       sets: 3, reps: '15',    note: 'Slow, controlled' },
+        { name: 'Tricep dip (chair)',            sets: 3, reps: '12–15', note: 'Straight legs for more load' },
+        { name: 'Superman hold',                 sets: 3, reps: '12 · 2s', note: 'Rear chain' },
+        { name: 'Plank',                         sets: 3, reps: '45 sec', note: 'Full tension' },
+      ],
+      lower_b: [
+        { name: 'Sumo squat (bodyweight)',       sets: 4, reps: '15–20', note: 'Wide stance, glute focus' },
+        { name: 'Walking lunge',                 sets: 3, reps: '16/leg', note: 'Corridor if possible' },
+        { name: 'Single-leg RDL',                sets: 3, reps: '10/leg', note: 'Hinge on one leg' },
+        { name: 'Single-leg glute bridge',       sets: 3, reps: '15/leg', note: 'Pause at top' },
+        { name: 'Single-leg calf raise',         sets: 4, reps: '20/leg', note: 'Full ROM' },
+        { name: 'Dead bug',                      sets: 3, reps: '10/side', note: 'Back flat' },
+        { name: 'Bicycle crunch',                sets: 3, reps: '20/side', note: 'Full rotation' },
+      ],
+    },
+  },
+
+  hypertrophy: {
+    id: 'hypertrophy',
+    name: 'Hypertrophy',
+    subtitle: 'High Volume Push / Pull / Legs',
+    goal: 'Maximize muscle growth',
+    weeks: 12,
+    color: '#f0c87a',
+    days: ['push','pull','legs'],
+    schedule: ['push','pull','legs','rest','push','pull','rest'],
+    workouts: {
+      push: [
+        { name: 'Dumbbell bench press',          sets: 4, reps: '10–12', note: 'Full stretch at bottom' },
+        { name: 'Dumbbell incline press',        sets: 4, reps: '10–12', note: 'Upper chest' },
+        { name: 'Dumbbell overhead press',       sets: 3, reps: '10–12', note: 'Strict — no leg drive' },
+        { name: 'Dumbbell lateral raise',        sets: 4, reps: '15–20', note: 'Slow, cables-style' },
+        { name: 'Dumbbell chest fly',            sets: 3, reps: '12–15', note: 'Deep stretch, controlled' },
+        { name: 'Overhead tricep ext. (DB)',     sets: 3, reps: '12–15', note: 'Long head focus' },
+        { name: 'Tricep kickback',               sets: 3, reps: '15',    note: 'Squeeze at full extension' },
+        { name: 'Weighted crunch',               sets: 3, reps: '15–20', note: 'Slow and deliberate' },
+        { name: 'Plank with shoulder tap',       sets: 3, reps: '30 sec', note: 'Anti-rotation' },
+      ],
+      pull: [
+        { name: 'Dumbbell bent-over row',        sets: 4, reps: '10–12', note: 'Squeeze lat at top' },
+        { name: 'Dumbbell single-arm row',       sets: 4, reps: '10–12', note: 'Full ROM' },
+        { name: 'Chest-supported row (DB)',      sets: 3, reps: '12–15', note: 'No cheating — strict' },
+        { name: 'Dumbbell rear delt fly',        sets: 4, reps: '15–20', note: 'Prone on incline bench' },
+        { name: 'Dumbbell curl (alternating)',   sets: 4, reps: '12',    note: 'Supinate — full contraction' },
+        { name: 'Hammer curl',                   sets: 3, reps: '12',    note: 'Brachialis thickness' },
+        { name: 'Incline curl',                  sets: 3, reps: '12',    note: 'Stretch at bottom' },
+        { name: 'Ab wheel rollout',              sets: 3, reps: '10',    note: 'Core anti-extension' },
+        { name: 'Bicycle crunch',                sets: 3, reps: '20/side', note: 'Slow rotation' },
+      ],
+      legs: [
+        { name: 'Dumbbell goblet squat',         sets: 4, reps: '10–12', note: 'Pause 2s at bottom' },
+        { name: 'Dumbbell RDL',                  sets: 4, reps: '10–12', note: 'Deep stretch, slow' },
+        { name: 'DB Bulgarian split squat',      sets: 3, reps: '10–12/leg', note: 'Quad dominant' },
+        { name: 'Dumbbell walking lunge',        sets: 3, reps: '14/leg', note: 'Long stride' },
+        { name: 'Dumbbell sumo squat',           sets: 3, reps: '12–15', note: 'Glute focus' },
+        { name: 'Standing calf raise (DB)',      sets: 4, reps: '20',    note: 'Full ROM, pause at top' },
+        { name: 'Lying leg raise',               sets: 3, reps: '15',    note: 'Lower abs' },
+        { name: 'Reverse crunch',                sets: 3, reps: '15',    note: 'Curl hips up' },
+        { name: 'Side plank',                    sets: 2, reps: '40 sec/side', note: 'Lateral stability' },
+      ],
+    },
+    travel: {
+      push: [
+        { name: 'Push-up',                       sets: 5, reps: '15–20', note: 'Slow 3s down' },
+        { name: 'Wide push-up',                  sets: 4, reps: '12–15', note: 'Chest stretch' },
+        { name: 'Decline push-up',               sets: 3, reps: '12',    note: 'Feet on bed' },
+        { name: 'Diamond push-up',               sets: 3, reps: '12',    note: 'Tricep focus' },
+        { name: 'Pike push-up',                  sets: 3, reps: '12',    note: 'Shoulder focus' },
+        { name: 'Lateral raise (no weight)',     sets: 4, reps: '20–25', note: 'Pause at top' },
+        { name: 'Tricep dip (chair)',            sets: 3, reps: '15',    note: 'Slow descent' },
+        { name: 'Crunch',                        sets: 3, reps: '20',    note: 'No momentum' },
+        { name: 'Plank',                         sets: 3, reps: '45 sec', note: 'Full tension' },
+      ],
+      pull: [
+        { name: 'Inverted row',                  sets: 5, reps: '10–12', note: 'Under table' },
+        { name: 'Towel door row',                sets: 4, reps: '12–15', note: 'Single arm' },
+        { name: 'Superman hold',                 sets: 4, reps: '12 · 2s', note: 'Rear chain' },
+        { name: 'Prone Y-T-W raise',             sets: 3, reps: '10 each', note: 'Rear delt' },
+        { name: 'Chin-up / pull-up',             sets: 3, reps: 'Max',   note: 'Door frame if available' },
+        { name: 'Isometric curl (towel)',        sets: 3, reps: '8 · 5s', note: 'Hard contraction' },
+        { name: 'Dead bug',                      sets: 3, reps: '10/side', note: 'Back flat' },
+        { name: 'Bicycle crunch',                sets: 3, reps: '20/side', note: 'Slow rotation' },
+        { name: 'Hollow body hold',              sets: 3, reps: '25 sec', note: 'Full core engagement' },
+      ],
+      legs: [
+        { name: 'Bulgarian split squat',         sets: 5, reps: '12/leg', note: 'Rear foot on bed' },
+        { name: 'Jump squat',                    sets: 4, reps: '15–20', note: 'Power' },
+        { name: 'Walking lunge',                 sets: 4, reps: '16/leg', note: 'Corridor' },
+        { name: 'Single-leg RDL',                sets: 3, reps: '12/leg', note: 'Balance focus' },
+        { name: 'Sumo squat (bodyweight)',       sets: 3, reps: '20',    note: 'Glute emphasis' },
+        { name: 'Single-leg calf raise',         sets: 4, reps: '20/leg', note: 'Step edge' },
+        { name: 'Lying leg raise',               sets: 3, reps: '15',    note: 'Lower abs' },
+        { name: 'Reverse crunch',                sets: 3, reps: '15',    note: 'Curl hips up' },
+        { name: 'Side plank',                    sets: 2, reps: '40 sec/side', note: 'Lateral stability' },
+      ],
+    },
+  },
+
+  strength: {
+    id: 'strength',
+    name: 'Strength',
+    subtitle: 'Heavy Compound Focus',
+    goal: 'Maximize strength gains',
+    weeks: 8,
+    color: '#f07a7a',
+    days: ['push','pull','legs'],
+    schedule: ['push','rest','pull','rest','legs','rest','rest'],
+    workouts: {
+      push: [
+        { name: 'Barbell bench press',           sets: 5, reps: '3–5',   note: 'Max intensity — long rest 3–5 min' },
+        { name: 'Dumbbell overhead press',       sets: 4, reps: '5–6',   note: 'Strict, no leg drive' },
+        { name: 'Dumbbell incline press',        sets: 3, reps: '6–8',   note: 'Heavy' },
+        { name: 'Dumbbell lateral raise',        sets: 3, reps: '12',    note: 'Accessory' },
+        { name: 'Overhead tricep ext. (DB)',     sets: 3, reps: '8–10',  note: 'Heavy, controlled' },
+        { name: 'Plank',                         sets: 3, reps: '45 sec', note: 'Core stability' },
+      ],
+      pull: [
+        { name: 'Barbell bent-over row',         sets: 5, reps: '3–5',   note: 'Max weight — match bench' },
+        { name: 'Dumbbell single-arm row',       sets: 4, reps: '6–8',   note: 'Heavy, brace hard' },
+        { name: 'Dumbbell chest-supported row',  sets: 3, reps: '8–10',  note: 'Strict form' },
+        { name: 'Dumbbell curl (alternating)',   sets: 3, reps: '8',     note: 'Heavy' },
+        { name: 'Hammer curl',                   sets: 3, reps: '8',     note: 'Heavy' },
+        { name: 'Dead bug',                      sets: 3, reps: '10/side', note: 'Core stability' },
+      ],
+      legs: [
+        { name: 'Barbell Romanian deadlift',     sets: 5, reps: '3–5',   note: 'Max weight — 3–5 min rest' },
+        { name: 'Dumbbell goblet squat',         sets: 4, reps: '6–8',   note: 'Heavy — 110s' },
+        { name: 'DB Bulgarian split squat',      sets: 3, reps: '6–8/leg', note: 'Heavy, controlled' },
+        { name: 'Single-leg RDL',                sets: 3, reps: '8/leg',  note: 'Loaded if possible' },
+        { name: 'Standing calf raise (DB)',      sets: 4, reps: '12',    note: 'Heavy, slow' },
+        { name: 'Ab wheel rollout',              sets: 3, reps: '8–10',  note: 'Core anti-extension' },
+      ],
+    },
+    travel: {
+      push: [
+        { name: 'Push-up (weighted if possible)',sets: 5, reps: '10–15', note: 'Use backpack for load' },
+        { name: 'Pike push-up',                  sets: 4, reps: '10–12', note: 'Shoulder strength' },
+        { name: 'Diamond push-up',               sets: 4, reps: '10–12', note: 'Tricep strength' },
+        { name: 'Tricep dip (chair)',            sets: 3, reps: '12–15', note: 'Slow, heavy' },
+        { name: 'Lateral raise (no weight)',     sets: 3, reps: '20',    note: 'Pause at top' },
+        { name: 'Plank',                         sets: 3, reps: '45 sec', note: 'Core' },
+      ],
+      pull: [
+        { name: 'Inverted row',                  sets: 5, reps: '8–10',  note: 'Feet elevated for more load' },
+        { name: 'Towel door row',                sets: 4, reps: '10–12', note: 'Single arm, heavy' },
+        { name: 'Chin-up / pull-up',             sets: 5, reps: 'Max',   note: 'Door frame — primary lift' },
+        { name: 'Isometric curl (towel)',        sets: 3, reps: '6 · 8s', note: 'Max contraction' },
+        { name: 'Superman hold',                 sets: 3, reps: '10 · 3s', note: 'Rear chain' },
+        { name: 'Dead bug',                      sets: 3, reps: '10/side', note: 'Core stability' },
+      ],
+      legs: [
+        { name: 'Bulgarian split squat',         sets: 5, reps: '10/leg', note: 'Slow — use backpack for load' },
+        { name: 'Jump squat',                    sets: 5, reps: '10',    note: 'Max power' },
+        { name: 'Single-leg RDL',                sets: 4, reps: '10/leg', note: 'Slow, controlled' },
+        { name: 'Pistol squat (assisted)',       sets: 3, reps: '5/leg',  note: 'Use door frame for balance' },
+        { name: 'Single-leg calf raise',         sets: 4, reps: '15/leg', note: 'Loaded if possible' },
+        { name: 'Ab wheel / plank',              sets: 3, reps: '45 sec', note: 'Core stability' },
+      ],
+    },
+  },
 };
+
+// ── Program state ─────────────────────────────────────
+const DEFAULT_PROGRAM_STATE = {
+  programId: 'cut',
+  startDate: '2026-03-25',
+  travelMode: false,
+};
+
+function getProgramState() {
+  const saved = cacheGet('program_state');
+  return saved || DEFAULT_PROGRAM_STATE;
+}
+
+function saveProgramState(state) {
+  cacheSet('program_state', state);
+  sbWrite('program_state', state);
+}
+
+function getActiveProgram() {
+  const state = getProgramState();
+  return PROGRAMS[state.programId] || PROGRAMS.cut;
+}
+
+function isTravelMode() {
+  return getProgramState().travelMode || false;
+}
+
+function getProgramWeek() {
+  const state = getProgramState();
+  const start = new Date(state.startDate);
+  const now = new Date();
+  const diffDays = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+  return Math.min(Math.max(1, Math.floor(diffDays / 7) + 1), getActiveProgram().weeks);
+}
+
+// Build PLAN from active program for backward compat
+function buildPLAN() {
+  const prog = getActiveProgram();
+  const travel = isTravelMode();
+  const source = travel ? prog.travel : prog.workouts;
+  const plan = {};
+  Object.keys(source).forEach(day => {
+    plan[day] = source[day];
+    // Also add travel_ prefixed keys for bodyweight detection
+    if (travel) plan['travel_' + day] = source[day];
+  });
+  return plan;
+}
+
+// Legacy PLAN — now dynamic
+let PLAN = buildPLAN();
 
 // ── Workout form ──────────────────────────────────────
 let exCount = 0;
 const TIMED_PATTERN = /(\d+)\s*sec/i;
-const BODYWEIGHT_TYPES = ['travel_push','travel_pull','travel_legs'];
+const BODYWEIGHT_TYPES = ['travel_push','travel_pull','travel_legs','travel_upper_a','travel_upper_b','travel_lower_a','travel_lower_b'];
 
 function isBodyweightWorkout() {
+  if (isTravelMode()) return true;
   return BODYWEIGHT_TYPES.includes(document.getElementById('workout-type').value);
 }
 
@@ -1355,7 +1695,19 @@ function initWorkoutForm() {
   document.getElementById('workout-date').value = today();
   document.getElementById('exercise-blocks').innerHTML = '';
   exCount = 0;
+
+  // Rebuild PLAN from active program + travel mode
+  PLAN = buildPLAN();
+
+  // Populate workout type select from active program
+  const prog = getActiveProgram();
+  const travel = isTravelMode();
+  const dayLabels = { push:'Push', pull:'Pull', legs:'Legs', upper_a:'Upper A', upper_b:'Upper B', lower_a:'Lower A', lower_b:'Lower B' };
   const sel = document.getElementById('workout-type');
+  sel.innerHTML = prog.days.map(d =>
+    `<option value="${d}">${prog.name} — ${dayLabels[d]||d}${travel ? ' ✈' : ''}</option>`
+  ).join('') + `<option disabled>──────────</option><option value="custom">Custom</option>`;
+
   sel.onchange = () => {
     const hint = document.getElementById('preset-hint');
     hint.style.display = PLAN[sel.value] ? 'block' : 'none';
@@ -2585,20 +2937,200 @@ function selectRoute(date, duration, stravaId, isNike) {
   routeMap.fitBounds(routePolyline.getBounds(), { padding: [40, 40] });
 }
 
+// ── Data page ─────────────────────────────────────────
+function getImportMeta() { return cacheGet('import_meta') || {}; }
+function setImportMeta(key, extra) {
+  const meta = getImportMeta();
+  meta[key] = { ts: Date.now(), ...extra };
+  cacheSet('import_meta', meta);
+}
+
+function fmtImportDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+}
+
+function renderDataPage() {
+  const meta = getImportMeta();
+  const workouts = getWorkouts();
+  const runs = getRuns();
+  const routes = getRoutes();
+  const meals = getMeals();
+
+  // Hevy
+  const hevyWorkouts = workouts.filter(w => w.notes && w.notes.includes('Wk'));
+  const hevyMeta = meta.hevy;
+  if (hevyWorkouts.length) {
+    document.getElementById('hevy-badge').style.display = '';
+    document.getElementById('hevy-meta').textContent = hevyWorkouts.length + ' workouts' + (hevyMeta ? ' · Last import ' + fmtImportDate(hevyMeta.ts) : '');
+  } else {
+    document.getElementById('hevy-badge').style.display = 'none';
+    document.getElementById('hevy-meta').textContent = 'No Hevy data imported yet';
+  }
+
+  // Nike
+  const nikeRuns = runs.filter(r => r.nike);
+  const nikeMeta = meta.nike;
+  const nikeRoutes = Object.keys(routes).filter(k => k.startsWith('nike_')).length;
+  if (nikeRuns.length) {
+    document.getElementById('nike-badge').style.display = '';
+    document.getElementById('nike-meta').textContent =
+      nikeRuns.length + ' runs · ' + nikeRoutes + ' GPS routes' +
+      (nikeMeta ? ' · Last import ' + fmtImportDate(nikeMeta.ts) : '');
+  } else {
+    document.getElementById('nike-badge').style.display = 'none';
+    document.getElementById('nike-meta').textContent = 'No Nike data imported yet';
+  }
+
+  // Strava
+  const stravaRuns = runs.filter(r => r.strava_id);
+  const athlete = cacheGet('strava_athlete');
+  const stravaDataBadge = document.getElementById('strava-badge-data');
+  const stravaBtnData = document.getElementById('strava-btn-data');
+  const stravaSyncBtnData = document.getElementById('strava-sync-btn-data');
+  const stravaMetaData = document.getElementById('strava-meta-data');
+  if (athlete) {
+    stravaDataBadge.style.display = '';
+    stravaBtnData.style.display = 'none';
+    stravaSyncBtnData.style.display = '';
+    stravaMetaData.textContent = athlete.firstname + ' ' + athlete.lastname + ' · ' + stravaRuns.length + ' runs synced' + (meta.strava ? ' · ' + fmtImportDate(meta.strava.ts) : '');
+  } else {
+    stravaDataBadge.style.display = 'none';
+    stravaBtnData.style.display = '';
+    stravaSyncBtnData.style.display = 'none';
+    stravaMetaData.textContent = 'Not connected';
+  }
+
+  // Backup meta
+  const backupMeta = meta.backup_export;
+  document.getElementById('backup-meta').textContent = backupMeta ? 'Last export ' + fmtImportDate(backupMeta.ts) : 'No exports yet';
+
+  // Summary counts
+  document.getElementById('ds-workouts').textContent = workouts.length;
+  document.getElementById('ds-runs').textContent = runs.length;
+  document.getElementById('ds-routes').textContent = Object.keys(routes).length;
+  document.getElementById('ds-meals').textContent = meals.length;
+}
+
+// ── Programs page ─────────────────────────────────────
+function renderProgramsPage() {
+  const state = getProgramState();
+  const prog = getActiveProgram();
+  const week = getProgramWeek();
+  const pct = Math.round((week / prog.weeks) * 100);
+
+  // Start/end dates
+  const start = new Date(state.startDate);
+  const end = new Date(start);
+  end.setDate(end.getDate() + prog.weeks * 7);
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  document.getElementById('prog-status').textContent = `Week ${week} of ${prog.weeks} · ${prog.goal}`;
+  document.getElementById('prog-active-name').textContent = prog.name;
+  document.getElementById('prog-active-sub').textContent = prog.subtitle;
+  document.getElementById('prog-week-num').textContent = week;
+  document.getElementById('prog-week-of').textContent = `of ${prog.weeks} weeks`;
+  document.getElementById('prog-progress-fill').style.width = pct + '%';
+  document.getElementById('prog-start-label').textContent = fmt(start);
+  document.getElementById('prog-end-label').textContent = fmt(end);
+
+  // Color progress bar by program
+  document.getElementById('prog-progress-fill').style.background = prog.color;
+
+  // Travel toggle button
+  const travel = isTravelMode();
+  const btn = document.getElementById('travel-toggle-btn');
+  btn.textContent = travel ? '✈ On' : 'Off';
+  btn.style.background = travel ? 'rgba(184,240,122,0.15)' : 'transparent';
+  btn.style.borderColor = travel ? 'var(--accent)' : 'var(--border2)';
+  btn.style.color = travel ? 'var(--accent)' : 'var(--text2)';
+
+  // Program list
+  document.getElementById('prog-list').innerHTML = Object.values(PROGRAMS).map(p => {
+    const isActive = p.id === state.programId;
+    const endD = new Date(start);
+    endD.setDate(endD.getDate() + p.weeks * 7);
+    return `<div onclick="${isActive ? '' : `switchProgram('${p.id}')`}"
+      style="background:var(--surface2);border:1px solid ${isActive ? p.color : 'var(--border)'};border-radius:var(--radius);padding:16px;cursor:${isActive ? 'default' : 'pointer'};transition:all 0.15s;position:relative;overflow:hidden;"
+      ${!isActive ? `onmouseover="this.style.borderColor='${p.color}'" onmouseout="this.style.borderColor='var(--border)'"` : ''}
+    >
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${p.color};flex-shrink:0;"></div>
+        ${isActive ? `<span style="font-size:10px;font-family:'DM Mono',monospace;color:${p.color};background:${p.color}22;padding:2px 8px;border-radius:10px;">Active · Wk ${week}</span>` : `<span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);">${p.weeks} wks</span>`}
+      </div>
+      <div style="font-family:'WTGaramono',serif;font-size:18px;margin:6px 0 2px;">${p.name}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">${p.subtitle}</div>
+      <div style="font-size:11px;color:var(--text2);">${p.goal}</div>
+      ${!isActive ? `<div style="font-size:10px;color:var(--text3);margin-top:8px;font-family:'DM Mono',monospace;">Click to switch →</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleTravelMode() {
+  const state = getProgramState();
+  state.travelMode = !state.travelMode;
+  saveProgramState(state);
+  PLAN = buildPLAN();
+  renderProgramsPage();
+  toast(state.travelMode ? '✈ Travel mode on' : 'Travel mode off');
+}
+
+function switchProgram(id) {
+  if (!PROGRAMS[id]) return;
+  const state = getProgramState();
+  if (state.programId === id) return;
+  state.programId = id;
+  state.startDate = today();
+  state.travelMode = false;
+  saveProgramState(state);
+  PLAN = buildPLAN();
+  renderProgramsPage();
+  refreshDashboard();
+  toast(`Switched to ${PROGRAMS[id].name} program — Week 1 starts today`);
+}
+
 // ── Plan reference page ───────────────────────────────
 function renderPlanPage() {
-  ['push','pull','legs','travel_push','travel_pull','travel_legs'].forEach(type => {
-    const tbody = document.getElementById('plan-' + type + '-rows');
-    if (!tbody) return;
-    tbody.innerHTML = PLAN[type].map((ex, i) => `
-      <tr>
-        <td class="num" style="color:var(--text3);width:28px">${i+1}</td>
-        <td style="font-weight:500;color:var(--text)">${ex.name}</td>
-        <td class="num">${ex.sets}</td>
-        <td class="num">${ex.reps}</td>
-        <td style="font-size:12px;color:var(--text3)">${ex.note}</td>
-      </tr>`).join('');
-  });
+  const prog = getActiveProgram();
+  const travel = isTravelMode();
+  const source = travel ? prog.travel : prog.workouts;
+  const dayLabels = { push:'Push', pull:'Pull', legs:'Legs', upper_a:'Upper A', upper_b:'Upper B', lower_a:'Lower A', lower_b:'Lower B' };
+
+  // Update plan page title
+  const titleEl = document.getElementById('plan-prog-title');
+  if (titleEl) titleEl.textContent = prog.name + (travel ? ' — Travel mode' : '');
+
+  // Update tabs
+  const tabsEl = document.getElementById('plan-tabs');
+  if (tabsEl) {
+    tabsEl.innerHTML = Object.keys(source).map((day, i) =>
+      `<button class="btn btn-ghost btn-sm" onclick="showPlanTab('${day}',this)" ${i===0?`style="border-color:var(--accent);color:var(--accent);"`:''}>
+        ${dayLabels[day]||day}
+      </button>`
+    ).join('');
+  }
+
+  // Render each day tab
+  const tabsContainer = document.getElementById('plan-tabs-container');
+  if (tabsContainer) {
+    tabsContainer.innerHTML = Object.entries(source).map(([day, exs], i) =>
+      `<div class="plan-tab" id="plantab-${day}" style="${i===0?'':'display:none'}">
+        <table style="width:100%">
+          <thead><tr><th style="width:28px"></th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Notes</th></tr></thead>
+          <tbody>
+            ${exs.map((ex, j) => `<tr>
+              <td class="num" style="color:var(--text3)">${j+1}</td>
+              <td style="font-weight:500;color:var(--text)">${ex.name}</td>
+              <td class="num">${ex.sets}</td>
+              <td class="num">${ex.reps}</td>
+              <td style="font-size:12px;color:var(--text3)">${ex.note}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`
+    ).join('');
+  }
 }
 
 function showPlanTab(tab, el) {
@@ -2619,8 +3151,10 @@ function stravaConnect() {
 }
 
 function stravaSetConnected(athleteName) {
-  document.getElementById('strava-btn').style.display = 'none';
-  const status = document.getElementById('strava-status');
+  const btnData = document.getElementById('strava-btn-data');
+  const syncBtnData = document.getElementById('strava-sync-btn-data');
+  const badgeData = document.getElementById('strava-badge-data');
+  if (btnData) btnData.style.display = 'none';
   status.style.display = 'block';
   status.style.color = '#fc4c02';
   status.textContent = '⚡ ' + (athleteName || 'Connected');
@@ -2655,19 +3189,18 @@ async function stravaRefreshToken() {
 }
 
 async function stravaSyncRuns() {
-  const btn = document.getElementById('strava-sync-btn');
-  btn.textContent = 'Syncing...';
-  btn.disabled = true;
+  const btn = document.getElementById('strava-sync-btn-data');
+  if (btn) { btn.textContent = 'Syncing...'; btn.disabled = true; }
 
   const token = await stravaRefreshToken();
-  if (!token) { toast('Strava not connected'); btn.textContent = '↓ Sync runs'; btn.disabled = false; return; }
+  if (!token) { toast('Strava not connected'); if (btn) { btn.textContent = '↓ Sync runs'; btn.disabled = false; } return; }
 
   try {
     const res = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=50&page=1', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const activities = await res.json();
-    if (!Array.isArray(activities)) { toast('Strava sync failed'); btn.textContent = '↓ Sync runs'; btn.disabled = false; return; }
+    if (!Array.isArray(activities)) { toast('Strava sync failed'); if (btn) { btn.textContent = '↓ Sync runs'; btn.disabled = false; } return; }
 
     const runs = activities.filter(a => {
       const t = (a.sport_type || a.type || '').toLowerCase();
@@ -2706,6 +3239,7 @@ async function stravaSyncRuns() {
       saveRuns(existing);
       refreshDashboard();
       renderHistory('all');
+      setImportMeta('strava', { count: added });
       toast(`Synced ${added} run${added !== 1 ? 's' : ''} from Strava ✓`);
     } else {
       toast('All runs already up to date');
@@ -2713,8 +3247,7 @@ async function stravaSyncRuns() {
   } catch(e) {
     toast('Strava sync error — try again');
   }
-  btn.textContent = '↓ Sync runs';
-  btn.disabled = false;
+  if (btn) { btn.textContent = '↓ Sync runs'; btn.disabled = false; }
 }
 
 // Handle OAuth callback params on page load
@@ -2853,6 +3386,7 @@ function exportData() {
   a.download = 'progress-tracker-' + dateStr + '.json';
   a.click();
   URL.revokeObjectURL(url);
+  setImportMeta('backup_export', {});
   toast('Data exported ✓');
 }
 
@@ -3027,6 +3561,7 @@ function importHevyCSV(event) {
       saveWorkouts(existing);
       refreshDashboard();
       renderHistory('all');
+      setImportMeta('hevy', { count: added });
       toast(`Imported ${added} workout${added !== 1 ? 's' : ''} from Hevy ✓`);
     } catch(err) {
       console.error(err);
@@ -3161,6 +3696,7 @@ async function importNikeTCX(event) {
     refreshHome();
     renderHistory('all');
     if (document.getElementById('page-routes').classList.contains('active')) renderRoutesList();
+    setImportMeta('nike', { runs: toAdd.length, routes: routesAdded });
 
     const msg = toAdd.length > 0
       ? `Imported ${toAdd.length} run${toAdd.length !== 1 ? 's' : ''} + ${routesAdded} GPS routes from Nike ✓`

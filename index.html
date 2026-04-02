@@ -251,7 +251,19 @@
   .landing-dash-link { font-size: 11px; color: var(--text3); cursor: pointer; margin-top: 20px; font-family: 'DM Mono', monospace; transition: color 0.15s; text-decoration: none; }
   .landing-dash-link:hover { color: var(--accent); }
   @media (max-width: 700px) {
-    .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 12px; }
+    /* Sidebar — collapsible mobile nav */
+    .sidebar { width: 100%; height: auto; position: relative; flex-direction: column; padding: 0; }
+    .sidebar-mobile-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .sidebar-mobile-body { display: none; padding: 12px 16px 16px; }
+    .sidebar-mobile-body.open { display: block; }
+    .sidebar-mobile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px; }
+    .sidebar-mobile-grid .nav-item { padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid transparent; }
+    .sidebar-mobile-grid .nav-section { display: none; }
+    .sidebar-footer { padding: 12px 0 0; border-top: 1px solid var(--border); }
+    .nav-section { padding: 10px 0 4px; font-size: 10px; }
+    .hamburger-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 20px; padding: 4px; }
+
+    /* Main */
     .main { margin-left: 0; padding: 16px; }
     .main-inner { max-width: 100%; }
     .shell { flex-direction: column; }
@@ -261,6 +273,18 @@
     .landing-cards { grid-template-columns: 1fr 1fr; max-width: 100%; }
     .landing-today { grid-template-columns: 1fr 1fr; }
     .landing-cards .landing-card:last-child { grid-column: span 2; }
+
+    /* Routes — stacked */
+    #page-routes { margin: -16px; width: calc(100% + 32px); }
+    .routes-mobile-list { border-bottom: 1px solid var(--border); max-height: 40vh; overflow-y: auto; }
+    .routes-mobile-list.collapsed { max-height: 0; overflow: hidden; }
+    .routes-mobile-toggle { display: flex !important; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12px; color: var(--text2); font-family: 'DM Mono', monospace; }
+    .routes-mobile-map { height: calc(60vh - 52px); }
+    .routes-mobile-map.expanded { height: calc(100vh - 52px); }
+
+    /* HIIT — single column, no overflow */
+    #page-hiit .hiit-config-grid { grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    #page-hiit #hiit-countdown { font-size: 80px; }
   }
 
 </style>
@@ -269,9 +293,18 @@
 <div class="shell">
   <!-- Sidebar -->
   <nav class="sidebar">
-    <div class="logo">
+    <!-- Mobile header (visible on small screens) -->
+    <div class="sidebar-mobile-header" style="display:none;" id="mobile-nav-header">
+      <div class="logo-text" style="font-family:'WTGaramono',serif;font-size:18px;color:var(--accent);line-height:1.1;">ACCT DEPT</div>
+      <button class="hamburger-btn" onclick="toggleMobileNav()" id="hamburger-btn">☰</button>
+    </div>
+    <!-- Desktop logo -->
+    <div class="logo" id="desktop-logo">
       <div class="logo-text" style="line-height:1.1;">ACCT<br>DEPT</div>
     </div>
+    <!-- Nav body — collapses on mobile -->
+    <div id="sidebar-body" class="sidebar-mobile-body">
+    <div class="sidebar-mobile-grid">
     <div class="nav-section">Track</div>
     <div class="nav-item active" onclick="nav('home')">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z"/></svg>
@@ -327,6 +360,7 @@
       <div class="goal-chip" style="margin-bottom:14px;">220–225 lbs</div>
       <button class="btn btn-ghost btn-sm" onclick="nav('data')" style="width:100%;justify-content:center;">Data &amp; imports</button>
     </div>
+    </div><!-- end sidebar-body -->
   </nav>
 
   <!-- Main content -->
@@ -655,9 +689,9 @@
 
     <!-- ROUTES -->
     <div id="page-routes" class="page">
-      <div style="display:grid;grid-template-columns:300px 1fr;height:100vh;overflow:hidden;">
+      <div id="routes-grid" style="display:grid;grid-template-columns:300px 1fr;height:100vh;overflow:hidden;">
         <!-- Run list -->
-        <div style="display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);overflow:hidden;">
+        <div id="routes-list-panel" style="display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);overflow:hidden;">
           <div style="padding:16px 16px 12px;border-bottom:1px solid var(--border);">
             <div style="font-family:'WTGaramono',serif;font-size:22px;margin-bottom:10px;">Routes</div>
             <div style="display:flex;gap:6px;">
@@ -669,7 +703,7 @@
           <div id="routes-list" style="overflow-y:auto;flex:1;"></div>
         </div>
         <!-- Map -->
-        <div style="position:relative;overflow:hidden;">
+        <div style="position:relative;overflow:hidden;" id="routes-map-container">
           <div id="route-map" style="width:100%;height:100%;"></div>
           <div id="route-map-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface2);flex-direction:column;gap:8px;pointer-events:none;">
             <div style="font-size:32px;opacity:0.3;">◎</div>
@@ -691,7 +725,7 @@
 
       <!-- Config -->
       <div class="card" style="margin-bottom:16px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;">
+        <div class="hiit-config-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
           <div>
             <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Rounds</div>
             <div style="display:flex;align-items:center;gap:12px;">
@@ -1044,7 +1078,7 @@ async function syncFromSupabase() {
 
 // ── Navigation ────────────────────────────────────────
 function navTo(page) {
-  // Programmatic nav without event requirement
+  if (isMobile()) closeMobileNav();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
@@ -2823,6 +2857,7 @@ function updateMapTheme() {
 
 function initRoutesPage() {
   renderRoutesList();
+  initRoutesPageMobile();
   if (!routeMap) {
     setTimeout(() => {
       const mapEl = document.getElementById('route-map');
@@ -2999,6 +3034,104 @@ function selectRoute(date, duration, stravaId, isNike) {
 
   routeMap.fitBounds(routePolyline.getBounds(), { padding: [40, 40] });
 }
+
+// ── Mobile layout ─────────────────────────────────────
+const isMobile = () => window.innerWidth <= 700;
+
+function initMobileLayout() {
+  const mobileHeader = document.getElementById('mobile-nav-header');
+  const desktopLogo = document.getElementById('desktop-logo');
+  const sidebarBody = document.getElementById('sidebar-body');
+  if (isMobile()) {
+    mobileHeader.style.display = 'flex';
+    desktopLogo.style.display = 'none';
+    sidebarBody.classList.remove('open'); // collapsed by default
+  } else {
+    mobileHeader.style.display = 'none';
+    desktopLogo.style.display = 'block';
+    sidebarBody.style.display = 'block'; // always visible on desktop
+  }
+  // Apply mobile grid class to nav
+  const navItems = document.querySelector('.sidebar-mobile-grid');
+  if (!navItems) return;
+}
+
+function toggleMobileNav() {
+  const body = document.getElementById('sidebar-body');
+  const btn = document.getElementById('hamburger-btn');
+  const open = body.classList.toggle('open');
+  btn.textContent = open ? '✕' : '☰';
+}
+
+function closeMobileNav() {
+  const body = document.getElementById('sidebar-body');
+  const btn = document.getElementById('hamburger-btn');
+  body.classList.remove('open');
+  btn.textContent = '☰';
+}
+
+let routesListOpen = true;
+function toggleRoutesList() {
+  routesListOpen = !routesListOpen;
+  const list = document.getElementById('routes-list');
+  const toggle = document.getElementById('routes-toggle-label');
+  const mapContainer = document.getElementById('routes-map-container');
+  if (routesListOpen) {
+    list.style.maxHeight = '40vh';
+    list.style.overflow = 'auto';
+    if (toggle) toggle.textContent = 'Runs ▾';
+    if (mapContainer) mapContainer.style.height = 'calc(60vh - 52px)';
+  } else {
+    list.style.maxHeight = '0';
+    list.style.overflow = 'hidden';
+    if (toggle) toggle.textContent = 'Runs ▸';
+    if (mapContainer) mapContainer.style.height = 'calc(100vh - 52px)';
+  }
+  if (routeMap) setTimeout(() => routeMap.invalidateSize(), 50);
+}
+
+function initRoutesPageMobile() {
+  const toggle = document.getElementById('routes-list-toggle');
+  const grid = document.getElementById('routes-grid');
+  const listPanel = document.getElementById('routes-list-panel');
+  const mapContainer = document.getElementById('routes-map-container');
+
+  if (isMobile()) {
+    // Stack vertically
+    grid.style.gridTemplateColumns = '1fr';
+    grid.style.gridTemplateRows = 'auto 1fr';
+    grid.style.height = '100vh';
+    listPanel.style.borderRight = 'none';
+    listPanel.style.borderBottom = '1px solid var(--border)';
+    listPanel.style.overflow = 'visible';
+    // Show toggle button
+    if (toggle) toggle.style.display = 'flex';
+    // Set initial heights
+    const list = document.getElementById('routes-list');
+    list.style.maxHeight = '40vh';
+    list.style.overflow = 'auto';
+    if (mapContainer) mapContainer.style.height = 'calc(60vh - 52px)';
+  } else {
+    grid.style.gridTemplateColumns = '300px 1fr';
+    grid.style.gridTemplateRows = '';
+    grid.style.height = '100vh';
+    listPanel.style.borderRight = '1px solid var(--border)';
+    listPanel.style.borderBottom = '';
+    if (toggle) toggle.style.display = 'none';
+    const list = document.getElementById('routes-list');
+    list.style.maxHeight = '';
+    list.style.overflow = 'auto';
+    if (mapContainer) mapContainer.style.height = '';
+  }
+}
+
+window.addEventListener('resize', () => {
+  initMobileLayout();
+  if (document.getElementById('page-routes').classList.contains('active')) {
+    initRoutesPageMobile();
+    if (routeMap) setTimeout(() => routeMap.invalidateSize(), 100);
+  }
+});
 
 // ── HIIT Timer ────────────────────────────────────────
 const hiitState = {
@@ -3985,6 +4118,7 @@ async function importNikeTCX(event) {
 // ── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  initMobileLayout();
   stravaHandleCallback();
   refreshHome();
   document.getElementById('stats-date').value = today();

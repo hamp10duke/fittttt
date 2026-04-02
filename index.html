@@ -232,6 +232,7 @@
   /* Theme toggle */
   .theme-btn { position: fixed; top: 16px; right: 20px; z-index: 600; width: 36px; height: 36px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; font-size: 16px; }
   .theme-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+  @media (max-width: 700px) { .theme-btn { top: 12px; right: 12px; width: 32px; height: 32px; font-size: 14px; } }
 
   /* Landing page */
   .landing-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 120px); padding: 2rem 0; }
@@ -295,8 +296,9 @@
   <nav class="sidebar">
     <!-- Mobile header (visible on small screens) -->
     <div class="sidebar-mobile-header" style="display:none;" id="mobile-nav-header">
-      <div class="logo-text" style="font-family:'WTGaramono',serif;font-size:18px;color:var(--accent);line-height:1.1;">ACCT DEPT</div>
       <button class="hamburger-btn" onclick="toggleMobileNav()" id="hamburger-btn">☰</button>
+      <div class="logo-text" style="font-family:'WTGaramono',serif;font-size:18px;color:var(--accent);line-height:1.1;">ACCT DEPT</div>
+      <div style="width:36px;"></div><!-- spacer to balance theme toggle on right -->
     </div>
     <!-- Desktop logo -->
     <div class="logo" id="desktop-logo">

@@ -2379,24 +2379,19 @@ let routeTileLayer = null;
 let routeFilter = 'all';
 
 function getMapTileUrl() {
-  const isLight = document.body.classList.contains('light');
-  // Dark: Stadia Alidade Smooth Dark — clean near-black base
-  // Light: Stadia Alidade Smooth — warm grey
-  if (isLight) {
-    return {
-      url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
-      attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>'
-    };
-  } else {
-    return {
-      url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
-      attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>'
-    };
-  }
+  return {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+  };
+}
+
+function getMapFilter() {
+  return document.body.classList.contains('light')
+    ? 'grayscale(100%) brightness(1.05) contrast(0.9)'
+    : 'grayscale(100%) invert(1) brightness(0.85) contrast(0.9)';
 }
 
 function getRouteColor() {
-  // Use a vivid accent that pops on both themes
   return document.body.classList.contains('light') ? '#2a7d1e' : '#c8ff6a';
 }
 
@@ -2405,7 +2400,9 @@ function updateMapTheme() {
   const { url, attribution } = getMapTileUrl();
   if (routeTileLayer) routeMap.removeLayer(routeTileLayer);
   routeTileLayer = L.tileLayer(url, { attribution, maxZoom: 19 }).addTo(routeMap);
-  // Re-style route if visible
+  // Apply filter to tile pane
+  const tilePane = routeMap.getPanes().tilePane;
+  if (tilePane) tilePane.style.filter = getMapFilter();
   if (routePolyline) routePolyline.setStyle({ color: getRouteColor() });
 }
 
@@ -2415,12 +2412,11 @@ function initRoutesPage() {
     setTimeout(() => {
       const mapEl = document.getElementById('route-map');
       if (!mapEl || routeMap) return;
-      routeMap = L.map('route-map', {
-        zoomControl: true,
-        attributionControl: true
-      }).setView([33.55, -117.73], 12);
+      routeMap = L.map('route-map', { zoomControl: true }).setView([33.55, -117.73], 12);
       const { url, attribution } = getMapTileUrl();
       routeTileLayer = L.tileLayer(url, { attribution, maxZoom: 19 }).addTo(routeMap);
+      const tilePane = routeMap.getPanes().tilePane;
+      if (tilePane) tilePane.style.filter = getMapFilter();
     }, 150);
   } else {
     updateMapTheme();

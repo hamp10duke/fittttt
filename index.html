@@ -2374,25 +2374,56 @@ const saveRoutes = v => { cacheSet('routes', v); sbWrite('routes', v); };
 
 let routeMap = null;
 let routePolyline = null;
+let routeMarkers = [];
+let routeTileLayer = null;
 let routeFilter = 'all';
+
+function getMapTileUrl() {
+  const isLight = document.body.classList.contains('light');
+  // Dark: Stadia Alidade Smooth Dark — clean near-black base
+  // Light: Stadia Alidade Smooth — warm grey
+  if (isLight) {
+    return {
+      url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
+      attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>'
+    };
+  } else {
+    return {
+      url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
+      attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>'
+    };
+  }
+}
+
+function getRouteColor() {
+  // Use a vivid accent that pops on both themes
+  return document.body.classList.contains('light') ? '#2a7d1e' : '#c8ff6a';
+}
+
+function updateMapTheme() {
+  if (!routeMap) return;
+  const { url, attribution } = getMapTileUrl();
+  if (routeTileLayer) routeMap.removeLayer(routeTileLayer);
+  routeTileLayer = L.tileLayer(url, { attribution, maxZoom: 19 }).addTo(routeMap);
+  // Re-style route if visible
+  if (routePolyline) routePolyline.setStyle({ color: getRouteColor() });
+}
 
 function initRoutesPage() {
   renderRoutesList();
-  // Init map if not already
   if (!routeMap) {
     setTimeout(() => {
       const mapEl = document.getElementById('route-map');
       if (!mapEl || routeMap) return;
-      routeMap = L.map('route-map', { zoomControl: true }).setView([33.5, -117.7], 11);
-      L.tileLayer('https://{s}.basemap.here.com/maptile/2.1/maptile/newest/reduced.day/{z}/{x}/{y}/256/png8?app_id=demo&app_code=demo', {
-        attribution: '© HERE'
-      });
-      // Use OSM tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18
-      }).addTo(routeMap);
-    }, 100);
+      routeMap = L.map('route-map', {
+        zoomControl: true,
+        attributionControl: true
+      }).setView([33.55, -117.73], 12);
+      const { url, attribution } = getMapTileUrl();
+      routeTileLayer = L.tileLayer(url, { attribution, maxZoom: 19 }).addTo(routeMap);
+    }, 150);
+  } else {
+    updateMapTheme();
   }
 }
 
@@ -2433,6 +2464,12 @@ function renderRoutesList() {
     const key = r.nike ? 'nike_' + r.date + '_' + r.duration : r.strava_id ? 'strava_' + r.strava_id : null;
     const hasRoute = key && routes[key];
     const src = r.nike ? '🏃 Nike' : r.strava_id ? '⚡ Strava' : 'Manual';
+    const isStrava = !!r.strava_id;
+    const badge = hasRoute
+      ? `<span style="font-size:10px;color:var(--accent);margin-left:auto;">📍 GPS</span>`
+      : isStrava
+        ? `<button onclick="event.stopPropagation();fetchStravaRoute('${r.strava_id}','${r.date}','${r.duration}')" style="font-size:10px;margin-left:auto;background:rgba(252,76,2,0.15);border:none;color:#fc4c02;padding:2px 6px;border-radius:4px;cursor:pointer;">↓ Load route</button>`
+        : `<span style="font-size:10px;color:var(--text3);margin-left:auto;">no GPS</span>`;
     return `<div onclick="selectRoute('${r.date}','${r.duration}','${r.strava_id||''}',${r.nike||false})"
       style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;"
       onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"
@@ -2444,10 +2481,61 @@ function renderRoutesList() {
       <div style="display:flex;align-items:center;gap:6px;">
         <span style="font-size:11px;color:var(--text3);">${src}</span>
         <span style="font-size:11px;color:var(--text3);">· ${r.duration||'?'} min · ${r.pace||'?'}/mi</span>
-        ${hasRoute ? '<span style="font-size:10px;color:var(--accent);margin-left:auto;">📍 GPS</span>' : '<span style="font-size:10px;color:var(--text3);margin-left:auto;">no GPS</span>'}
+        ${badge}
       </div>
     </div>`;
   }).join('');
+}
+
+async function fetchStravaRoute(stravaId, date, duration) {
+  toast('Fetching route from Strava...');
+  try {
+    const token = await stravaRefreshToken();
+    if (!token) { toast('Strava not connected'); return; }
+
+    const res = await fetch(`https://www.strava.com/api/v3/activities/${stravaId}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+
+    if (!data.map?.polyline && !data.map?.summary_polyline) {
+      toast('No route data available for this run');
+      return;
+    }
+
+    // Decode Google encoded polyline
+    const encoded = data.map.polyline || data.map.summary_polyline;
+    const coords = decodePolyline(encoded);
+
+    if (!coords.length) { toast('Could not decode route'); return; }
+
+    // Store and display
+    const routes = getRoutes();
+    routes[`strava_${stravaId}`] = coords;
+    saveRoutes(routes);
+    renderRoutesList();
+    selectRoute(date, duration, stravaId, false);
+    toast('Route loaded ✓');
+  } catch(e) {
+    console.error(e);
+    toast('Failed to fetch route — try again');
+  }
+}
+
+function decodePolyline(encoded) {
+  // Google Polyline Algorithm decoder
+  const coords = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let b, shift = 0, result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += (result & 1) ? ~(result >> 1) : result >> 1;
+    shift = 0; result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += (result & 1) ? ~(result >> 1) : result >> 1;
+    coords.push([lat / 1e5, lng / 1e5]);
+  }
+  return coords;
 }
 
 function selectRoute(date, duration, stravaId, isNike) {
@@ -2472,20 +2560,33 @@ function selectRoute(date, duration, stravaId, isNike) {
 
   document.getElementById('route-map-empty').style.display = 'none';
 
-  if (routePolyline) routeMap.removeLayer(routePolyline);
+  // Clear previous route and markers
+  if (routePolyline) { routeMap.removeLayer(routePolyline); routePolyline = null; }
+  routeMarkers.forEach(m => routeMap.removeLayer(m));
+  routeMarkers = [];
+
+  const color = getRouteColor();
   routePolyline = L.polyline(coords, {
-    color: '#b8f07a',
-    weight: 3,
-    opacity: 0.85
+    color,
+    weight: 4,
+    opacity: 0.95,
+    lineJoin: 'round',
+    lineCap: 'round'
   }).addTo(routeMap);
 
-  // Add start/end markers
+  // Start dot (white) and end dot (accent)
   if (coords.length > 1) {
-    L.circleMarker(coords[0], { radius: 6, fillColor: '#7ab8f0', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(routeMap);
-    L.circleMarker(coords[coords.length-1], { radius: 6, fillColor: '#f07a7a', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(routeMap);
+    const isLight = document.body.classList.contains('light');
+    const startM = L.circleMarker(coords[0], {
+      radius: 5, fillColor: '#ffffff', color: color, weight: 2, fillOpacity: 1
+    }).addTo(routeMap);
+    const endM = L.circleMarker(coords[coords.length-1], {
+      radius: 5, fillColor: color, color: isLight ? '#fff' : '#0e0f0e', weight: 2, fillOpacity: 1
+    }).addTo(routeMap);
+    routeMarkers = [startM, endM];
   }
 
-  routeMap.fitBounds(routePolyline.getBounds(), { padding: [30, 30] });
+  routeMap.fitBounds(routePolyline.getBounds(), { padding: [40, 40] });
 }
 
 // ── Plan reference page ───────────────────────────────
@@ -2818,6 +2919,7 @@ function toggleTheme() {
   localStorage.setItem('theme', isLight ? 'light' : 'dark');
   document.getElementById('theme-toggle').textContent = isLight ? '◑' : '☀';
   if (document.getElementById('page-charts').classList.contains('active')) renderCharts();
+  updateMapTheme();
 }
 
 function initTheme() {

@@ -1004,9 +1004,44 @@
       </div>
 
       <!-- Today's meals -->
-      <div class="card">
+      <div class="card" style="margin-bottom:16px;">
         <div class="card-title" id="food-log-title">Today's log</div>
         <div id="food-meal-list"><div class="empty"><div class="empty-icon">◎</div><div class="empty-text">No meals logged yet</div></div></div>
+      </div>
+
+      <!-- Nutrition insights -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0;">Nutrition trends</div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost btn-sm" onclick="setNutritionRange(7,this)" style="border-color:var(--accent);color:var(--accent);" id="ntr-btn-7">7 days</button>
+            <button class="btn btn-ghost btn-sm" onclick="setNutritionRange(14,this)" id="ntr-btn-14">14 days</button>
+            <button class="btn btn-ghost btn-sm" onclick="setNutritionRange(30,this)" id="ntr-btn-30">30 days</button>
+          </div>
+        </div>
+        <!-- Summary averages -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;" id="ntr-avg-cards">
+          <div class="stat"><div class="stat-label">Avg cal</div><div><span class="stat-val" id="ntr-avg-cal">—</span></div><div class="stat-delta" id="ntr-delta-cal"></div></div>
+          <div class="stat"><div class="stat-label">Avg protein</div><div><span class="stat-val" id="ntr-avg-pro">—</span><span class="stat-unit">g</span></div><div class="stat-delta" id="ntr-delta-pro"></div></div>
+          <div class="stat"><div class="stat-label">Avg carbs</div><div><span class="stat-val" id="ntr-avg-carb">—</span><span class="stat-unit">g</span></div><div class="stat-delta" id="ntr-delta-carb"></div></div>
+          <div class="stat"><div class="stat-label">Avg fat</div><div><span class="stat-val" id="ntr-avg-fat">—</span><span class="stat-unit">g</span></div><div class="stat-delta" id="ntr-delta-fat"></div></div>
+        </div>
+        <!-- Target hit rate -->
+        <div style="margin-bottom:16px;" id="ntr-hit-rates">
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Days hitting target</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="ntr-hit-grid"></div>
+        </div>
+        <!-- Daily calorie chart -->
+        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Daily calories vs target</div>
+        <div style="position:relative;height:140px;"><canvas id="ntr-cal-chart"></canvas></div>
+        <!-- Macro split -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+          <div>
+            <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Avg macro split</div>
+            <div style="position:relative;height:140px;"><canvas id="ntr-macro-chart"></canvas></div>
+          </div>
+          <div id="ntr-insights" style="font-size:12px;color:var(--text2);line-height:1.7;padding-top:4px;"></div>
+        </div>
       </div>
     </div>
 
@@ -2604,6 +2639,158 @@ function showDayDetail(date) {
   toast(date + ': ' + parts.join(', '));
 }
 
+// ── Nutrition insights ────────────────────────────────
+let nutritionRangeDays = 7;
+let ntrCalChart = null;
+let ntrMacroChart = null;
+
+function setNutritionRange(days, el) {
+  nutritionRangeDays = days;
+  document.querySelectorAll('[id^="ntr-btn-"]').forEach(b => { b.style.borderColor = ''; b.style.color = ''; });
+  el.style.borderColor = 'var(--accent)'; el.style.color = 'var(--accent)';
+  renderNutritionInsights();
+}
+
+function renderNutritionInsights() {
+  const meals = getMeals();
+  if (!meals.length) return;
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - nutritionRangeDays);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  // Group by date
+  const byDate = {};
+  meals.forEach(m => {
+    if (m.date < cutoffStr) return;
+    if (!byDate[m.date]) byDate[m.date] = { cal:0, pro:0, carb:0, fat:0 };
+    m.items.forEach(it => {
+      byDate[m.date].cal  += it.cal    || 0;
+      byDate[m.date].pro  += it.protein || 0;
+      byDate[m.date].carb += it.carbs  || 0;
+      byDate[m.date].fat  += it.fat    || 0;
+    });
+  });
+
+  const days = Object.keys(byDate).sort();
+  const n = days.length;
+  if (!n) {
+    document.getElementById('ntr-avg-cal').textContent = '—';
+    document.getElementById('ntr-insights').textContent = 'No data for this range.';
+    return;
+  }
+
+  const avg = key => Math.round(days.reduce((s,d) => s + byDate[d][key], 0) / n);
+  const avgCal  = avg('cal');
+  const avgPro  = avg('pro');
+  const avgCarb = avg('carb');
+  const avgFat  = avg('fat');
+
+  const TARGETS = { cal: 2500, pro: 210, carb: 250, fat: 70 };
+
+  // Avg cards
+  const pctOf = (v, t) => Math.round((v/t)*100);
+  const deltaStr = (v, t) => {
+    const diff = v - t;
+    return (diff >= 0 ? '+' : '') + diff + (diff >= 0 ? ' over' : ' short');
+  };
+  const deltaClass = (v, t) => v >= t*0.9 && v <= t*1.1 ? 'delta-down' : 'delta-up';
+
+  document.getElementById('ntr-avg-cal').textContent  = avgCal.toLocaleString();
+  document.getElementById('ntr-avg-pro').textContent  = avgPro;
+  document.getElementById('ntr-avg-carb').textContent = avgCarb;
+  document.getElementById('ntr-avg-fat').textContent  = avgFat;
+  [['cal',avgCal],['pro',avgPro],['carb',avgCarb],['fat',avgFat]].forEach(([k,v]) => {
+    const el = document.getElementById('ntr-delta-' + k);
+    const t = k==='cal' ? TARGETS.cal : k==='pro' ? TARGETS.pro : k==='carb' ? TARGETS.carb : TARGETS.fat;
+    el.textContent = deltaStr(v, t);
+    el.className = 'stat-delta ' + deltaClass(v, t);
+  });
+
+  // Hit rates
+  const hitGrid = document.getElementById('ntr-hit-grid');
+  const metrics = [
+    { label:'Calories', key:'cal', target: TARGETS.cal, lo: 0.85, hi: 1.1 },
+    { label:'Protein',  key:'pro', target: TARGETS.pro, lo: 0.9,  hi: 2 },
+    { label:'Carbs',    key:'carb',target: TARGETS.carb,lo: 0.7,  hi: 1.2 },
+    { label:'Fat',      key:'fat', target: TARGETS.fat, lo: 0,    hi: 1.15 },
+  ];
+  hitGrid.innerHTML = metrics.map(m => {
+    const hits = days.filter(d => {
+      const v = byDate[d][m.key];
+      return v >= m.target * m.lo && v <= m.target * m.hi;
+    }).length;
+    const pct = Math.round((hits/n)*100);
+    const color = pct >= 70 ? 'var(--accent)' : pct >= 40 ? 'var(--amber)' : 'var(--red)';
+    return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">${m.label}</div>
+      <div style="font-size:16px;font-weight:500;color:${color};font-family:'DM Mono',monospace;">${pct}%</div>
+      <div style="font-size:10px;color:var(--text3);">${hits} / ${n} days</div>
+    </div>`;
+  }).join('');
+
+  // Daily calorie chart
+  if (ntrCalChart) { ntrCalChart.destroy(); ntrCalChart = null; }
+  const calCtx = document.getElementById('ntr-cal-chart')?.getContext('2d');
+  if (calCtx) {
+    ntrCalChart = new Chart(calCtx, {
+      type: 'bar',
+      data: {
+        labels: days.map(d => d.slice(5)),
+        datasets: [
+          { data: days.map(d => Math.round(byDate[d].cal)), backgroundColor: days.map(d => byDate[d].cal >= TARGETS.cal*0.85 ? 'rgba(184,240,122,0.6)' : 'rgba(240,122,122,0.5)'), borderRadius: 3 },
+          { data: days.map(() => TARGETS.cal), type:'line', borderColor:'rgba(255,255,255,0.2)', borderDash:[4,4], pointRadius:0, fill:false }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c => c.datasetIndex===0 ? c.parsed.y.toLocaleString() + ' cal' : 'Target' } } },
+        scales:{
+          x:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#5a615a', font:{ size:9 }, maxTicksLimit:10 } },
+          y:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#5a615a', font:{ size:9 } } }
+        }
+      }
+    });
+  }
+
+  // Macro donut
+  if (ntrMacroChart) { ntrMacroChart.destroy(); ntrMacroChart = null; }
+  const macroCtx = document.getElementById('ntr-macro-chart')?.getContext('2d');
+  const proteinCal = avgPro * 4;
+  const carbCal    = avgCarb * 4;
+  const fatCal     = avgFat * 9;
+  const totalMacroCal = proteinCal + carbCal + fatCal || 1;
+  if (macroCtx) {
+    ntrMacroChart = new Chart(macroCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Protein','Carbs','Fat'],
+        datasets: [{ data: [proteinCal, carbCal, fatCal], backgroundColor:['#7ab8f0','#f0c87a','#f07a7a'], borderWidth:0, hoverOffset:4 }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false, cutout:'65%',
+        plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c => c.label + ': ' + Math.round((c.raw/totalMacroCal)*100) + '%' } } }
+      }
+    });
+  }
+
+  // Insights text
+  const proteinPct = Math.round((proteinCal/totalMacroCal)*100);
+  const carbPct    = Math.round((carbCal/totalMacroCal)*100);
+  const fatPct     = Math.round((fatCal/totalMacroCal)*100);
+  const proShort   = TARGETS.pro - avgPro;
+  const insights = [];
+  if (proShort > 20)  insights.push(`Protein is averaging <b>${avgPro}g</b> — ${Math.round(proShort)}g short of your 210g target. That's ${Math.round(proShort/25)} extra servings of chicken breast or scoops of protein powder per day.`);
+  else if (proShort > 0) insights.push(`Protein is close — averaging <b>${avgPro}g</b>, just ${Math.round(proShort)}g shy of target.`);
+  else insights.push(`Protein target hit — averaging <b>${avgPro}g</b>.`);
+  if (fatPct > 35)    insights.push(`Fat is <b>${fatPct}%</b> of calories — higher than the ~28% ideal for a cut. Worth auditing cooking oils, sauces, and cheese.`);
+  if (avgCal < TARGETS.cal * 0.8) insights.push(`Calories are averaging <b>${avgCal.toLocaleString()}</b> — well below the 2,500 target. Chronic undereating can slow recovery.`);
+  const daysLogged = n;
+  const totalDays = nutritionRangeDays;
+  if (daysLogged < totalDays * 0.6) insights.push(`Only logged <b>${daysLogged} of ${totalDays}</b> days — the averages may not reflect full intake.`);
+  document.getElementById('ntr-insights').innerHTML = insights.map(i => `<p style="margin:0 0 10px;">${i}</p>`).join('');
+}
+
 // ── Food & Drink ──────────────────────────────────────
 const FOOD_TARGETS = { cal: 2500, protein: 210, carbs: 250, fat: 70 };
 let foodItemCount = 0;
@@ -2611,7 +2798,7 @@ let foodItemCount = 0;
 function initFoodPage() {
   document.getElementById('food-date').value = today();
   renderFoodPage();
-  // Seed one blank item row
+  renderNutritionInsights();
   document.getElementById('food-item-rows').innerHTML = '';
   foodItemCount = 0;
   addFoodItem();

@@ -1955,6 +1955,46 @@ function logSet(uid, isTimed, secs) {
   liveSync({ lastSetAt: Date.now() });
 }
 
+// Exercises that are always bodyweight — no weight input
+const BODYWEIGHT_EXERCISES = new Set([
+  'push-up','push up','wide push-up','wide push up','diamond push-up','diamond push up',
+  'decline push-up','decline push up','pike push-up','pike push up',
+  'pull-up','pull up','chin-up','chin up','inverted row',
+  'dip','tricep dip','chair dip',
+  'bulgarian split squat','split squat','walking lunge','lunge','reverse lunge',
+  'jump squat','squat (bodyweight)','sumo squat (bodyweight)',
+  'glute bridge','single-leg glute bridge','single leg glute bridge',
+  'single-leg rdl','single leg rdl','single leg romanian deadlift',
+  'dead bug','hollow body hold','hollow rock','plank','side plank',
+  'plank with shoulder tap','bicycle crunch','crunch','reverse crunch',
+  'lying leg raise','hanging knee raise','ab wheel rollout','ab wheel',
+  'superman hold','prone y-t-w raise','prone ytw raise',
+  'towel door row','isometric bicep curl (towel)','isometric curl (towel)',
+  'lateral raise (no weight)','hammer curl (no weight)',
+  'burpee','mountain climber','jumping jack',
+]);
+
+function isBodyweightExercise(name) {
+  return BODYWEIGHT_EXERCISES.has(name.toLowerCase().trim());
+}
+
+function getLastWeight(exerciseName) {
+  // Search workout history most-recent-first for this exercise name
+  const workouts = getWorkouts().sort((a,b) => b.date.localeCompare(a.date));
+  for (const w of workouts) {
+    for (const ex of (w.exercises || [])) {
+      if (ex.name.toLowerCase().trim() === exerciseName.toLowerCase().trim()) {
+        // Find highest weight used in any set
+        const weights = (ex.sets || [])
+          .map(s => parseFloat(s.weight))
+          .filter(v => !isNaN(v) && v > 0);
+        if (weights.length) return Math.max(...weights);
+      }
+    }
+  }
+  return null;
+}
+
 function loadPreset() {
   const type = document.getElementById('workout-type').value;
   const exercises = PLAN[type];
@@ -1962,21 +2002,27 @@ function loadPreset() {
   document.getElementById('exercise-blocks').innerHTML = '';
   exCount = 0;
   document.getElementById('preset-hint').style.display = 'none';
-  const isBodyweight = BODYWEIGHT_TYPES.includes(type);
+  const isTravelType = BODYWEIGHT_TYPES.includes(type);
+
   exercises.forEach(ex => {
     exCount++;
     const id = 'ex-' + exCount;
     const div = document.createElement('div');
     div.className = 'exercise-block';
     div.id = id;
-    const colHeader = isBodyweight
+    // Per-exercise bodyweight detection
+    const bw = isTravelType || isBodyweightExercise(ex.name);
+    const lastWeight = bw ? null : getLastWeight(ex.name);
+    const colHeader = bw
       ? `<div style="display:grid;grid-template-columns:24px auto auto auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;padding:0 0 2px 0;"><span></span><span>Reps / time</span><span></span><span></span></div>`
       : `<div style="display:grid;grid-template-columns:24px 1fr auto auto auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;padding:0 0 2px 0;"><span></span><span>Weight (lbs)</span><span>Reps / time</span><span></span><span></span></div>`;
+    const weightHint = lastWeight ? `<span style="font-size:10px;color:var(--accent);margin-top:2px;font-family:'DM Mono',monospace;">↑ last: ${lastWeight} lbs</span>` : '';
     div.innerHTML = `
       <div class="ex-header">
         <div style="flex:1;">
           <input type="text" value="${ex.name}" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border2);border-radius:0;padding:4px 0;font-size:14px;font-weight:500;color:var(--text);" class="ex-name-input">
           <div style="font-size:11px;color:var(--text3);margin-top:3px;font-family:'DM Mono',monospace;">${ex.note}</div>
+          ${weightHint}
         </div>
         <button class="btn-icon" onclick="document.getElementById('${id}').remove()" title="Remove" style="margin-left:10px;">×</button>
       </div>
@@ -1987,10 +2033,16 @@ function loadPreset() {
     document.getElementById('exercise-blocks').appendChild(div);
     const container = div.querySelector('.set-rows-' + exCount);
     for (let s = 1; s <= ex.sets; s++) {
-      container.appendChild(buildSetRow(exCount, s, ex.reps, isBodyweight));
+      const row = buildSetRow(exCount, s, ex.reps, bw);
+      // Pre-fill last weight into the weight input
+      if (lastWeight) {
+        const weightInput = row.querySelector('input[type="number"]');
+        if (weightInput) weightInput.value = lastWeight;
+      }
+      container.appendChild(row);
     }
   });
-  toast('Plan loaded — log your sets');
+  toast('Plan loaded — weights pre-filled from last session');
 }
 
 function addExercise() {
@@ -2019,8 +2071,11 @@ function addExercise() {
 function addSet(exId) {
   const container = document.querySelector('.set-rows-' + exId);
   const setNum = container.children.length + 1;
-  const isBodyweight = isBodyweightWorkout();
-  container.appendChild(buildSetRow(exId, setNum, '10', isBodyweight));
+  // Check exercise name for bodyweight detection
+  const exBlock = container.closest('.exercise-block');
+  const exName = exBlock?.querySelector('.ex-name-input')?.value || '';
+  const bw = isBodyweightWorkout() || isBodyweightExercise(exName);
+  container.appendChild(buildSetRow(exId, setNum, '10', bw));
 }
 
 function saveWorkout() {

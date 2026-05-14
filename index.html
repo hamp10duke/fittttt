@@ -3688,7 +3688,7 @@ function renderDataPage() {
     stravaDataBadge.style.display = '';
     stravaBtnData.style.display = 'none';
     stravaSyncBtnData.style.display = '';
-    stravaMetaData.textContent = athlete.firstname + ' ' + athlete.lastname + ' · ' + stravaRuns.length + ' runs synced' + (meta.strava ? ' · ' + fmtImportDate(meta.strava.ts) : '');
+    stravaMetaData.textContent = athlete + ' · ' + stravaRuns.length + ' runs synced' + (meta.strava ? ' · ' + fmtImportDate(meta.strava.ts) : '');
   } else {
     stravaDataBadge.style.display = 'none';
     stravaBtnData.style.display = '';
@@ -3894,18 +3894,23 @@ async function stravaSyncRuns() {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const activities = await res.json();
-    if (!Array.isArray(activities)) { toast('Strava sync failed'); if (btn) { btn.textContent = '↓ Sync runs'; btn.disabled = false; } return; }
+    if (!Array.isArray(activities)) {
+      const msg = activities?.message || activities?.errors?.[0]?.message || 'unknown error';
+      toast('Strava sync failed: ' + msg);
+      if (btn) { btn.textContent = '↓ Sync runs'; btn.disabled = false; }
+      return;
+    }
 
     const runs = activities.filter(a => {
       const t = (a.sport_type || a.type || '').toLowerCase();
-      return ['run','walk','hike','trailrun','virtualrun'].includes(t);
+      return ['run','walk','hike','trailrun','virtualrun','workout'].includes(t);
     });
     const existing = getRuns();
-    const existingStravaIds = new Set(existing.filter(r => r.strava_id).map(r => r.strava_id));
+    const existingStravaIds = new Set(existing.filter(r => r.strava_id).map(r => String(r.strava_id)));
 
     let added = 0;
     runs.forEach(r => {
-      if (existingStravaIds.has(r.id)) return;
+      if (existingStravaIds.has(String(r.id))) return;
       const distMiles = (r.distance / 1609.344).toFixed(2);
       const durMin    = Math.round(r.moving_time / 60);
       const paceSec   = r.distance > 0 ? r.moving_time / (r.distance / 1609.344) : 0;
@@ -3936,7 +3941,8 @@ async function stravaSyncRuns() {
       setImportMeta('strava', { count: added });
       toast(`Synced ${added} run${added !== 1 ? 's' : ''} from Strava ✓`);
     } else {
-      toast('All runs already up to date');
+      const types = [...new Set(activities.map(a => a.sport_type || a.type))].join(', ');
+      toast(`Up to date — ${activities.length} activities fetched, ${runs.length} runs found (${types})`);
     }
   } catch(e) {
     toast('Strava sync error — try again');

@@ -2045,9 +2045,31 @@ function loadPreset() {
   toast('Plan loaded — weights pre-filled from last session');
 }
 
+function applyLastWeightToBlock(exId) {
+  const block = document.getElementById('ex-' + exId);
+  if (!block) return;
+  const name = block.querySelector('.ex-name-input')?.value?.trim();
+  if (!name) return;
+  const lastWeight = getLastWeight(name);
+  if (!lastWeight) return;
+  block.querySelectorAll('.set-rows-' + exId + ' input[type="number"]').forEach(inp => {
+    if (!inp.value) inp.value = lastWeight;
+  });
+  let hint = block.querySelector('.weight-hint');
+  if (!hint) {
+    hint = document.createElement('span');
+    hint.className = 'weight-hint';
+    hint.style.cssText = 'font-size:10px;color:var(--accent);margin-top:2px;font-family:"DM Mono",monospace;display:block;';
+    const nameWrap = block.querySelector('.ex-header > div') || block.querySelector('.ex-header');
+    if (nameWrap) nameWrap.appendChild(hint);
+  }
+  hint.textContent = `↑ last: ${lastWeight} lbs`;
+}
+
 function addExercise() {
   exCount++;
   const id = 'ex-' + exCount;
+  const currentCount = exCount;
   const isBodyweight = isBodyweightWorkout();
   const div = document.createElement('div');
   div.className = 'exercise-block';
@@ -2057,25 +2079,35 @@ function addExercise() {
     : `<div style="display:grid;grid-template-columns:24px 1fr auto auto auto;gap:8px;margin-bottom:6px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;"><span></span><span>Weight (lbs)</span><span>Reps</span><span></span><span></span></div>`;
   div.innerHTML = `
     <div class="ex-header">
-      <input type="text" placeholder="Exercise name" style="width:auto;flex:1;background:transparent;border:none;border-bottom:1px solid var(--border2);border-radius:0;padding:4px 0;font-size:14px;font-weight:500;" class="ex-name-input">
-      <button class="btn-icon" onclick="document.getElementById('${id}').remove()" title="Remove">×</button>
+      <div style="flex:1;">
+        <input type="text" placeholder="Exercise name" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border2);border-radius:0;padding:4px 0;font-size:14px;font-weight:500;color:var(--text);" class="ex-name-input">
+      </div>
+      <button class="btn-icon" onclick="document.getElementById('${id}').remove()" title="Remove" style="margin-left:10px;">×</button>
     </div>
     ${colHeader}
-    <div class="set-rows-${exCount}"></div>
-    <button class="btn btn-ghost btn-sm" onclick="addSet(${exCount})" style="margin-top:6px;">+ Set</button>
+    <div class="set-rows-${currentCount}"></div>
+    <button class="btn btn-ghost btn-sm" onclick="addSet(${currentCount})" style="margin-top:6px;">+ Set</button>
   `;
   document.getElementById('exercise-blocks').appendChild(div);
-  addSet(exCount);
+  div.querySelector('.ex-name-input').addEventListener('blur', () => applyLastWeightToBlock(currentCount));
+  addSet(currentCount);
 }
 
 function addSet(exId) {
   const container = document.querySelector('.set-rows-' + exId);
   const setNum = container.children.length + 1;
-  // Check exercise name for bodyweight detection
   const exBlock = container.closest('.exercise-block');
   const exName = exBlock?.querySelector('.ex-name-input')?.value || '';
   const bw = isBodyweightWorkout() || isBodyweightExercise(exName);
-  container.appendChild(buildSetRow(exId, setNum, '10', bw));
+  const row = buildSetRow(exId, setNum, '10', bw);
+  if (!bw) {
+    const lastWeight = exName ? getLastWeight(exName) : null;
+    if (lastWeight) {
+      const weightInput = row.querySelector('input[type="number"]');
+      if (weightInput) weightInput.value = lastWeight;
+    }
+  }
+  container.appendChild(row);
 }
 
 function saveWorkout() {

@@ -3852,7 +3852,7 @@ function stravaSetConnected(athleteName) {
   status.style.display = 'block';
   status.style.color = '#fc4c02';
   status.textContent = '⚡ ' + (athleteName || 'Connected');
-  document.getElementById('strava-sync-btn').style.display = '';
+  if (syncBtnData) syncBtnData.style.display = '';
 }
 
 async function stravaRefreshToken() {

@@ -386,6 +386,8 @@
         <div class="landing-greeting">What would you like to record?</div>
         <div class="landing-sub" id="landing-date">Today</div>
 
+        <div id="workout-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;"></div>
+
         <div class="landing-cards">
           <!-- Weights -->
           <div class="landing-card" onclick="navTo('log-workout')">
@@ -1157,6 +1159,15 @@ function nav(page) {
   navTo(page);
 }
 
+function launchWorkout(type) {
+  navTo('log-workout');
+  requestAnimationFrame(() => {
+    const sel = document.getElementById('workout-type');
+    if (sel) { sel.value = type; sel.dispatchEvent(new Event('change')); }
+    loadPreset();
+  });
+}
+
 function refreshHome() {
   const now = new Date();
   document.getElementById('landing-date').textContent = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
@@ -1166,7 +1177,8 @@ function refreshHome() {
   document.getElementById('ls-cal').textContent = food.count > 0 ? food.cal : '—';
 
   // Total workouts
-  document.getElementById('ls-workouts').textContent = getWorkouts().length;
+  const allWorkouts = getWorkouts();
+  document.getElementById('ls-workouts').textContent = allWorkouts.length;
 
   // Latest weight
   const stats = getStats().sort((a,b) => a.date.localeCompare(b.date));
@@ -1174,11 +1186,33 @@ function refreshHome() {
   document.getElementById('ls-weight').textContent = latest ? latest.weight + ' lbs' : '—';
 
   // Card subtitles — today's activity
-  const todayWorkouts = getWorkouts().filter(w => w.date === today());
+  const todayWorkouts = allWorkouts.filter(w => w.date === today());
   const todayRuns = getRuns().filter(r => r.date === today());
   document.getElementById('lc-workout').textContent = todayWorkouts.length ? '✓ Logged today' : 'Log a session';
   document.getElementById('lc-run').textContent = todayRuns.length ? '✓ Logged today' : 'Log a run or walk';
   document.getElementById('lc-food').textContent = food.count > 0 ? `${food.count} meal${food.count>1?'s':''} · ${food.cal} cal` : 'Log a meal';
+
+  // Workout quick-launch grid
+  const prog = getActiveProgram();
+  const travel = isTravelMode();
+  const dayLabels = { push:'Push', pull:'Pull', legs:'Legs', upper_a:'Upper A', upper_b:'Upper B', lower_a:'Lower A', lower_b:'Lower B' };
+  const todayTypes = new Set(todayWorkouts.map(w => w.type));
+  const grid = document.getElementById('workout-grid');
+  if (grid) {
+    grid.innerHTML = prog.days.map(d => {
+      const label = dayLabels[d] || d;
+      const done = todayTypes.has(d);
+      const travelTag = travel ? ' ✈' : '';
+      const doneTag = done ? `<span style="font-size:10px;color:#4caf50;font-family:'DM Mono',monospace;display:block;margin-top:4px;">✓ done</span>` : '';
+      return `<div onclick="launchWorkout('${d}')"
+        style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 14px;cursor:pointer;transition:background 0.15s;"
+        onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'">
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px;">${label}${travelTag}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${prog.name}</div>
+        ${doneTag}
+      </div>`;
+    }).join('');
+  }
 }
 
 function today() {

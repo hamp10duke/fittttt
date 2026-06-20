@@ -1,18 +1,17 @@
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method not allowed' };
-  }
+  const { refresh_token } = JSON.parse(event.body || '{}');
+  if (!refresh_token) return { statusCode: 400, body: 'Missing refresh_token' };
+
+  const CLIENT_ID = '218912';
+  const CLIENT_SECRET = '6f4c340ee0f9af730f33f16dac6d4445f92d221f';
 
   try {
-    const { refresh_token } = JSON.parse(event.body);
-    if (!refresh_token) return { statusCode: 400, body: 'Missing refresh_token' };
-
     const res = await fetch('https://www.strava.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        client_id: '218912',
-        client_secret: '6f4c340ee0f9af730f33f16dac6d4445f92d221f',
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
         refresh_token,
         grant_type: 'refresh_token'
       })
@@ -24,10 +23,11 @@ exports.handler = async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         access_token: data.access_token,
+        refresh_token: data.refresh_token,
         expires_at: data.expires_at
       })
     };
-  } catch (e) {
-    return { statusCode: 500, body: 'Server error' };
+  } catch (err) {
+    return { statusCode: 500, body: err.message };
   }
 };
